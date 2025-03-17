@@ -1,4 +1,4 @@
-# Business Directory Portal
+# Sayrab - Business Directory Portal
 
 A comprehensive platform for business owners to connect, showcase their equipment, and build relationships with other businesses.
 
