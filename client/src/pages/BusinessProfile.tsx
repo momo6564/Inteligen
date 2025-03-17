@@ -5,7 +5,6 @@ import {
   Box,
   Typography,
   Grid,
-  Paper,
   Rating,
   Button,
   Divider,
