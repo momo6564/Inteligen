@@ -15,14 +15,6 @@ import {
   Alert,
 } from '@mui/material';
 
-interface MachineForm {
-  name: string;
-  description: string;
-  manufacturer: string;
-  yearOfManufacture: string;
-  specifications: string;
-}
-
 interface BusinessForm {
   name: string;
   corporateId?: string;
@@ -34,16 +26,7 @@ interface BusinessForm {
   email?: string;
   isOpen: boolean;
   openToNewBusiness: boolean;
-  machinery?: MachineForm[];
 }
-
-const initialMachineForm: MachineForm = {
-  name: '',
-  description: '',
-  manufacturer: '',
-  yearOfManufacture: '',
-  specifications: '',
-};
 
 const initialBusinessForm: BusinessForm = {
   name: '',
@@ -56,7 +39,6 @@ const initialBusinessForm: BusinessForm = {
   email: '',
   isOpen: true,
   openToNewBusiness: true,
-  machinery: [],
 };
 
 const AddBusiness: React.FC = () => {
@@ -76,35 +58,6 @@ const AddBusiness: React.FC = () => {
     setFormData((prev) => ({
       ...prev,
       [name]: e.target.checked,
-    }));
-  };
-
-  const handleMachineChange = (index: number) => (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => {
-      const newMachinery = [...(prev.machinery || [])];
-      newMachinery[index] = {
-        ...newMachinery[index],
-        [name]: value,
-      };
-      return {
-        ...prev,
-        machinery: newMachinery,
-      };
-    });
-  };
-
-  const addMachine = () => {
-    setFormData((prev) => ({
-      ...prev,
-      machinery: [...(prev.machinery || []), { ...initialMachineForm }],
-    }));
-  };
-
-  const removeMachine = (index: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      machinery: (prev.machinery || []).filter((_, i) => i !== index),
     }));
   };
 

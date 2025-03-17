@@ -30,37 +30,47 @@ import {
 interface Business {
   _id: string;
   name: string;
-  description?: string;
-  location?: string;
-  phone?: string;
-  email?: string;
-  website?: string;
-  links?: string[];
-  hasPublicPresence: boolean;
-  category?: string;
+  corporateId: string;
+  phone: string;
+  website: string;
+  contactPerson: string;
+  memberClass: string;
+  designation: string;
+  category: string;
+  address: string;
+  mobile: string;
+  email: string;
 }
 
 const BusinessProfile: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [business, setBusiness] = useState<Business | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const theme = useTheme();
-
-  useEffect(() => {
-    fetchBusiness();
-  }, [id]);
 
   const fetchBusiness = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/businesses/${id}`);
+      const apiUrl = process.env.NODE_ENV === 'production' 
+        ? process.env.REACT_APP_API_URL_PROD 
+        : process.env.REACT_APP_API_URL;
+
+      const response = await fetch(`${apiUrl}/api/businesses/${id}`);
+      if (!response.ok) {
+        throw new Error('Business not found');
+      }
       const data = await response.json();
       setBusiness(data);
     } catch (error) {
-      console.error('Error fetching business:', error);
+      setError(error instanceof Error ? error.message : 'An error occurred');
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchBusiness();
+  }, [id]);
 
   const handleRefreshScrape = async () => {
     try {
@@ -85,10 +95,10 @@ const BusinessProfile: React.FC = () => {
     );
   }
 
-  if (!business) {
+  if (error || !business) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
-        <Typography>Business not found</Typography>
+        <Typography color="error">{error || 'Business not found'}</Typography>
       </Box>
     );
   }
