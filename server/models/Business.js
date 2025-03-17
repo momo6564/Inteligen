@@ -83,10 +83,10 @@ const businessSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
-  links: {
-    type: [String],
-    default: []
-  },
+  links: [{
+    type: String,
+    trim: true
+  }],
   machinery: [machineSchema],
   // Add social media fields
   socialMedia: {
@@ -135,6 +135,14 @@ const businessSchema = new mongoose.Schema({
   },
   lastScraped: {
     type: Date
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now
+  },
+  updatedAt: {
+    type: Date,
+    default: Date.now
   }
 }, {
   timestamps: true // Adds createdAt and updatedAt fields
@@ -149,6 +157,12 @@ businessSchema.index({
   corporateId: 'text',
   category: 'text',
   contactPerson: 'text'
+});
+
+// Update the updatedAt timestamp before saving
+businessSchema.pre('save', function(next) {
+  this.updatedAt = Date.now();
+  next();
 });
 
 const Business = mongoose.model('Business', businessSchema);

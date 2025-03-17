@@ -1,73 +1,51 @@
-const puppeteer = require('puppeteer');
-const { execSync } = require('child_process');
+const axios = require('axios');
+const cheerio = require('cheerio');
 
-function findChrome() {
-  const defaultPaths = [
-    'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-    'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
-  ];
-
-  for (const path of defaultPaths) {
-    try {
-      execSync(`"${path}" --version`);
-      return path;
-    } catch (e) {
-      continue;
-    }
-  }
-
-  return null;
-}
-
-async function searchSocialMedia(businessName) {
-  let browser;
+const searchSocialMedia = async (businessName) => {
   try {
-    browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    // Search for business on LinkedIn
+    const linkedinUrl = `https://www.linkedin.com/search/results/companies/?keywords=${encodeURIComponent(businessName)}`;
+    const linkedinResponse = await axios.get(linkedinUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+      }
     });
 
-    const page = await browser.newPage();
-    await page.setDefaultNavigationTimeout(30000);
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-    
-    // Simple search query
-    const searchQuery = `${businessName} sialkot pakistan`;
-    await page.goto(`https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`, {
-      waitUntil: 'networkidle0'
-    });
-
-    // Get first 3 links
-    const links = await page.evaluate(() => {
-      const allLinks = Array.from(document.querySelectorAll('div.g a'));
-      return allLinks
-        .map(link => link.href)
-        .filter(href => 
-          href && 
-          href.startsWith('http') && 
-          !href.includes('google.com/') &&
-          !href.includes('search?') &&
-          !href.includes('cache:')
-        )
-        .slice(0, 3);
-    });
-
-    return {
-      links,
-      hasPublicPresence: links.length > 0
+    const $ = cheerio.load(linkedinResponse.data);
+    const linkedinData = {
+      companyName: $('.entity-result__title-text').first().text().trim(),
+      description: $('.entity-result__primary-subtitle').first().text().trim(),
+      location: $('.entity-result__secondary-subtitle').first().text().trim()
     };
 
+    // Search for business on Instagram
+    const instagramUrl = `https://www.instagram.com/${encodeURIComponent(businessName.toLowerCase().replace(/\s+/g, ''))}`;
+    const instagramResponse = await axios.get(instagramUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+      }
+    });
+
+    const instagram$ = cheerio.load(instagramResponse.data);
+    const instagramData = {
+      followers: instagram$('meta[property="og:description"]').attr('content'),
+      profilePic: instagram$('meta[property="og:image"]').attr('content')
+    };
+
+    return {
+      linkedin: linkedinData,
+      instagram: instagramData
+    };
   } catch (error) {
-    console.error(`Error searching for ${businessName}:`, error);
+    console.error('Error in social media scraping:', error);
     return {
-      links: [],
-      hasPublicPresence: false
+      linkedin: null,
+      instagram: null,
+      error: error.message
     };
-  } finally {
-    if (browser) {
-      await browser.close();
-    }
   }
-}
+};
 
-module.exports = { searchSocialMedia }; 
+module.exports = {
+  searchSocialMedia
+}; 

@@ -111,7 +111,11 @@ const AddBusiness: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const response = await fetch('http://localhost:5000/api/businesses', {
+      const apiUrl = process.env.NODE_ENV === 'production' 
+        ? process.env.REACT_APP_API_URL_PROD 
+        : process.env.REACT_APP_API_URL;
+
+      const response = await fetch(`${apiUrl}/api/businesses`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -126,7 +130,6 @@ const AddBusiness: React.FC = () => {
       navigate('/businesses');
     } catch (error) {
       console.error('Error creating business:', error);
-      // You might want to show an error message to the user here
     }
   };
 
@@ -145,9 +148,12 @@ const AddBusiness: React.FC = () => {
         const worksheet = workbook.Sheets[sheetName];
         const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
-        // Send the data to the backend
+        const apiUrl = process.env.NODE_ENV === 'production' 
+          ? process.env.REACT_APP_API_URL_PROD 
+          : process.env.REACT_APP_API_URL;
+
         try {
-          const response = await fetch('http://localhost:5000/api/businesses/bulk', {
+          const response = await fetch(`${apiUrl}/api/businesses/bulk`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

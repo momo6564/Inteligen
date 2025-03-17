@@ -49,7 +49,7 @@ const getBusinesses = async (req, res) => {
   }
 };
 
-// Get single business
+// Get a single business
 const getBusiness = async (req, res) => {
   try {
     const business = await Business.findById(req.params.id);
@@ -62,18 +62,12 @@ const getBusiness = async (req, res) => {
   }
 };
 
-// Create business
+// Create a new business
 const createBusiness = async (req, res) => {
   try {
-    const business = new Business({
-      corporateId: req.body.corporateId || '',
-      name: req.body.name || '',
-      phone: req.body.phone || 'N/A',
-      website: req.body.website || 'N/A',
-    });
-    
-    const savedBusiness = await business.save();
-    res.status(201).json(savedBusiness);
+    const business = new Business(req.body);
+    await business.save();
+    res.status(201).json(business);
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
@@ -109,35 +103,31 @@ const bulkImportBusinesses = async (req, res) => {
   }
 };
 
-// Update business
+// Update a business
 const updateBusiness = async (req, res) => {
   try {
-    const business = await Business.findById(req.params.id);
+    const business = await Business.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true }
+    );
     if (!business) {
       return res.status(404).json({ message: 'Business not found' });
     }
-
-    business.corporateId = req.body.corporateId || business.corporateId;
-    business.name = req.body.name || business.name;
-    business.phone = req.body.phone || business.phone;
-    business.website = req.body.website || business.website;
-
-    const updatedBusiness = await business.save();
-    res.json(updatedBusiness);
+    res.json(business);
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
 };
 
-// Delete business
+// Delete a business
 const deleteBusiness = async (req, res) => {
   try {
-    const business = await Business.findById(req.params.id);
+    const business = await Business.findByIdAndDelete(req.params.id);
     if (!business) {
       return res.status(404).json({ message: 'Business not found' });
     }
-    await business.deleteOne();
-    res.json({ message: 'Business deleted' });
+    res.json({ message: 'Business deleted successfully' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
