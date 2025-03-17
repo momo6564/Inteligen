@@ -1,4 +1,4 @@
-const Business = require('../models/business');
+const Business = require('../models/Business');
 const { searchSocialMedia } = require('../utils/socialMediaScraper');
 
 // Get businesses with pagination
