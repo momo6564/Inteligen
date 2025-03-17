@@ -40,6 +40,10 @@ interface Business {
   address: string;
   mobile: string;
   email: string;
+  description?: string;
+  location?: string;
+  hasPublicPresence?: boolean;
+  links?: string[];
 }
 
 const BusinessProfile: React.FC = () => {
@@ -70,7 +74,7 @@ const BusinessProfile: React.FC = () => {
 
   useEffect(() => {
     fetchBusiness();
-  }, [id]);
+  }, [id, fetchBusiness]);
 
   const handleRefreshScrape = async () => {
     try {
