@@ -26,6 +26,11 @@ interface BusinessForm {
   email?: string;
   isOpen: boolean;
   openToNewBusiness: boolean;
+  machinery?: {
+    name: string;
+    quantity: number;
+    specifications?: string;
+  }[];
 }
 
 const initialBusinessForm: BusinessForm = {
@@ -39,12 +44,14 @@ const initialBusinessForm: BusinessForm = {
   email: '',
   isOpen: true,
   openToNewBusiness: true,
+  machinery: [],
 };
 
 const AddBusiness: React.FC = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState<BusinessForm>(initialBusinessForm);
   const [importError, setImportError] = useState<string | null>(null);
+  const [showMachinerySection, setShowMachinerySection] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -58,6 +65,39 @@ const AddBusiness: React.FC = () => {
     setFormData((prev) => ({
       ...prev,
       [name]: e.target.checked,
+    }));
+  };
+
+  const handleMachineryToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setShowMachinerySection(e.target.checked);
+    if (!e.target.checked) {
+      setFormData((prev) => ({
+        ...prev,
+        machinery: [],
+      }));
+    }
+  };
+
+  const handleMachineryChange = (index: number, field: string, value: string | number) => {
+    setFormData((prev) => ({
+      ...prev,
+      machinery: prev.machinery?.map((machine, i) => 
+        i === index ? { ...machine, [field]: value } : machine
+      ),
+    }));
+  };
+
+  const addMachinery = () => {
+    setFormData((prev) => ({
+      ...prev,
+      machinery: [...(prev.machinery || []), { name: '', quantity: 1, specifications: '' }],
+    }));
+  };
+
+  const removeMachinery = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      machinery: prev.machinery?.filter((_, i) => i !== index),
     }));
   };
 
@@ -284,6 +324,74 @@ const AddBusiness: React.FC = () => {
                 label="Open to New Business"
               />
             </Grid>
+            <Grid item xs={12}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={showMachinerySection}
+                    onChange={handleMachineryToggle}
+                  />
+                }
+                label="Add Machinery Details"
+              />
+            </Grid>
+
+            {showMachinerySection && (
+              <>
+                <Grid item xs={12}>
+                  <Typography variant="h6" gutterBottom>
+                    Machinery
+                  </Typography>
+                  {formData.machinery?.map((machine, index) => (
+                    <Box key={index} sx={{ mb: 2, p: 2, border: '1px solid #ddd', borderRadius: 1 }}>
+                      <Grid container spacing={2}>
+                        <Grid item xs={12} sm={4}>
+                          <TextField
+                            fullWidth
+                            label="Machine Name"
+                            value={machine.name}
+                            onChange={(e) => handleMachineryChange(index, 'name', e.target.value)}
+                          />
+                        </Grid>
+                        <Grid item xs={12} sm={3}>
+                          <TextField
+                            fullWidth
+                            type="number"
+                            label="Quantity"
+                            value={machine.quantity}
+                            onChange={(e) => handleMachineryChange(index, 'quantity', parseInt(e.target.value))}
+                          />
+                        </Grid>
+                        <Grid item xs={12} sm={4}>
+                          <TextField
+                            fullWidth
+                            label="Specifications"
+                            value={machine.specifications}
+                            onChange={(e) => handleMachineryChange(index, 'specifications', e.target.value)}
+                          />
+                        </Grid>
+                        <Grid item xs={12} sm={1}>
+                          <Button
+                            color="error"
+                            onClick={() => removeMachinery(index)}
+                            sx={{ minWidth: 'auto', p: 1 }}
+                          >
+                            ×
+                          </Button>
+                        </Grid>
+                      </Grid>
+                    </Box>
+                  ))}
+                  <Button
+                    variant="outlined"
+                    onClick={addMachinery}
+                    sx={{ mt: 2 }}
+                  >
+                    Add Machine
+                  </Button>
+                </Grid>
+              </>
+            )}
           </Grid>
 
           <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mt: 4 }}>

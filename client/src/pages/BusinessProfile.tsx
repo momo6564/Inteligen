@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import {
   Container,
@@ -53,7 +53,7 @@ const BusinessProfile: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const theme = useTheme();
 
-  const fetchBusiness = async () => {
+  const fetchBusiness = useCallback(async () => {
     try {
       const apiUrl = process.env.NODE_ENV === 'production' 
         ? process.env.REACT_APP_API_URL_PROD 
@@ -70,11 +70,11 @@ const BusinessProfile: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
   useEffect(() => {
     fetchBusiness();
-  }, [id, fetchBusiness]);
+  }, [fetchBusiness]);
 
   const handleRefreshScrape = async () => {
     try {
