@@ -18,20 +18,21 @@ const businessSchema = new mongoose.Schema({
   name: {
     type: String,
     required: true,
-    index: true // Adding index for search functionality
+    index: true, // Adding index for search functionality
+    trim: true
   },
   phone: {
     type: String,
-    default: 'N/A'
+    trim: true
   },
   website: {
     type: String,
-    default: 'N/A'
+    trim: true
   },
   // Additional scraped fields
   contactPerson: {
     type: String,
-    default: 'N/A'
+    trim: true
   },
   memberClass: {
     type: String,
@@ -39,27 +40,37 @@ const businessSchema = new mongoose.Schema({
   },
   designation: {
     type: String,
-    default: 'N/A'
+    trim: true
   },
   category: {
     type: String,
-    default: 'N/A'
+    trim: true
   },
   address: {
     type: String,
-    default: 'N/A'
+    trim: true
   },
   mobile: {
     type: String,
-    default: 'N/A'
+    trim: true
   },
   email: {
     type: String,
-    default: 'N/A'
+    trim: true,
+    lowercase: true
   },
-  description: String,
-  businessType: String,
-  location: String,
+  description: {
+    type: String,
+    trim: true
+  },
+  businessType: {
+    type: String,
+    trim: true
+  },
+  location: {
+    type: String,
+    trim: true
+  },
   isOpen: {
     type: Boolean,
     default: true
@@ -68,7 +79,63 @@ const businessSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
-  machinery: [machineSchema]
+  hasPublicPresence: {
+    type: Boolean,
+    default: false
+  },
+  links: {
+    type: [String],
+    default: []
+  },
+  machinery: [machineSchema],
+  // Add social media fields
+  socialMedia: {
+    instagram: {
+      type: String,
+      trim: true
+    },
+    facebook: {
+      type: String,
+      trim: true
+    },
+    linkedin: {
+      type: String,
+      trim: true
+    },
+    twitter: {
+      type: String,
+      trim: true
+    }
+  },
+  // First search result info
+  searchResult: {
+    url: {
+      type: String,
+      trim: true
+    },
+    title: {
+      type: String,
+      trim: true
+    },
+    snippet: {
+      type: String,
+      trim: true
+    }
+  },
+  // Detected category from search
+  detectedCategory: {
+    type: String,
+    trim: true
+  },
+  // Track scraping status
+  scrapingStatus: {
+    type: String,
+    enum: ['pending', 'completed', 'failed'],
+    default: 'pending'
+  },
+  lastScraped: {
+    type: Date
+  }
 }, {
   timestamps: true // Adds createdAt and updatedAt fields
 });
