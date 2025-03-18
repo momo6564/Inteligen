@@ -1,4 +1,4 @@
-const Business = require('../models/Business');
+const { Business } = require('../models');
 const { searchSocialMedia } = require('../utils/socialMediaScraper');
 
 // Get businesses with pagination
@@ -66,8 +66,8 @@ const getBusiness = async (req, res) => {
 const createBusiness = async (req, res) => {
   try {
     const business = new Business(req.body);
-    await business.save();
-    res.status(201).json(business);
+    const savedBusiness = await business.save();
+    res.status(201).json(savedBusiness);
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
@@ -109,7 +109,7 @@ const updateBusiness = async (req, res) => {
     const business = await Business.findByIdAndUpdate(
       req.params.id,
       req.body,
-      { new: true }
+      { new: true, runValidators: true }
     );
     if (!business) {
       return res.status(404).json({ message: 'Business not found' });

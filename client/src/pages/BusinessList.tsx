@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Container,
@@ -13,6 +13,8 @@ import {
   Pagination,
   FormControlLabel,
   Switch,
+  CircularProgress,
+  Alert,
 } from '@mui/material';
 
 interface Business {
@@ -30,6 +32,11 @@ interface Business {
   email: string;
 }
 
+interface ApiResponse {
+  businesses: Business[];
+  totalPages: number;
+}
+
 const BusinessList: React.FC = () => {
   const navigate = useNavigate();
   const [businesses, setBusinesses] = useState<Business[]>([]);
@@ -37,27 +44,39 @@ const BusinessList: React.FC = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [showScrapedOnly, setShowScrapedOnly] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchBusinesses();
-  }, [page, showScrapedOnly]);
-
-  const fetchBusinesses = async () => {
+  const fetchBusinesses = useCallback(async () => {
     try {
+      setLoading(true);
+      setError(null);
       const apiUrl = process.env.NODE_ENV === 'production' 
         ? process.env.REACT_APP_API_URL_PROD 
         : process.env.REACT_APP_API_URL;
 
       const response = await fetch(
-        `${apiUrl}/api/businesses?page=${page}&limit=12&scrapedOnly=${showScrapedOnly}`
+        `${apiUrl}/businesses?page=${page}&limit=12&scrapedOnly=${showScrapedOnly}`
       );
-      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch businesses');
+      }
+      
+      const data: ApiResponse = await response.json();
       setBusinesses(data.businesses);
       setTotalPages(data.totalPages);
     } catch (error) {
+      setError(error instanceof Error ? error.message : 'An error occurred while fetching businesses');
       console.error('Error fetching businesses:', error);
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [page, showScrapedOnly]);
+
+  useEffect(() => {
+    fetchBusinesses();
+  }, [page, showScrapedOnly, fetchBusinesses]);
 
   const handlePageChange = (event: React.ChangeEvent<unknown>, value: number) => {
     setPage(value);
@@ -71,6 +90,22 @@ const BusinessList: React.FC = () => {
     business.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     business.corporateId.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Container maxWidth="lg">
+        <Alert severity="error" sx={{ mt: 4 }}>{error}</Alert>
+      </Container>
+    );
+  }
 
   return (
     <Container maxWidth="lg">
@@ -98,57 +133,65 @@ const BusinessList: React.FC = () => {
           />
         </Box>
 
-        <Grid container spacing={3}>
-          {filteredBusinesses.map((business) => (
-            <Grid item xs={12} sm={6} md={4} key={business._id}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>
-                    {business.name}
-                  </Typography>
-                  <Typography color="textSecondary" gutterBottom>
-                    Corporate ID: {business.corporateId}
-                  </Typography>
-                  <Typography variant="body2">
-                    Phone: {business.phone}
-                  </Typography>
-                  <Typography variant="body2">
-                    Website: {business.website}
-                  </Typography>
-                  <Typography variant="body2">
-                    Contact: {business.contactPerson}
-                  </Typography>
-                  <Typography variant="body2">
-                    Designation: {business.designation}
-                  </Typography>
-                  <Typography variant="body2">
-                    Category: {business.category}
-                  </Typography>
-                </CardContent>
-                <CardActions>
-                  <Box sx={{ flexGrow: 1 }} />
-                  <Typography
-                    variant="body2"
-                    color="primary"
-                    sx={{ cursor: 'pointer' }}
-                    onClick={() => navigate(`/businesses/${business._id}`)}
-                  >
-                    View Details
-                  </Typography>
-                </CardActions>
-              </Card>
+        {filteredBusinesses.length === 0 ? (
+          <Typography variant="body1" color="text.secondary" align="center">
+            No businesses found
+          </Typography>
+        ) : (
+          <>
+            <Grid container spacing={3}>
+              {filteredBusinesses.map((business) => (
+                <Grid item xs={12} sm={6} md={4} key={business._id}>
+                  <Card>
+                    <CardContent>
+                      <Typography variant="h6" gutterBottom>
+                        {business.name}
+                      </Typography>
+                      <Typography color="textSecondary" gutterBottom>
+                        Corporate ID: {business.corporateId}
+                      </Typography>
+                      <Typography variant="body2">
+                        Phone: {business.phone}
+                      </Typography>
+                      <Typography variant="body2">
+                        Website: {business.website}
+                      </Typography>
+                      <Typography variant="body2">
+                        Contact: {business.contactPerson}
+                      </Typography>
+                      <Typography variant="body2">
+                        Designation: {business.designation}
+                      </Typography>
+                      <Typography variant="body2">
+                        Category: {business.category}
+                      </Typography>
+                    </CardContent>
+                    <CardActions>
+                      <Box sx={{ flexGrow: 1 }} />
+                      <Typography
+                        variant="body2"
+                        color="primary"
+                        sx={{ cursor: 'pointer' }}
+                        onClick={() => navigate(`/business/${business._id}`)}
+                      >
+                        View Details
+                      </Typography>
+                    </CardActions>
+                  </Card>
+                </Grid>
+              ))}
             </Grid>
-          ))}
-        </Grid>
 
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-          <Pagination
-            count={totalPages}
-            page={page}
-            onChange={handlePageChange}
-            color="primary"
-          />
-        </Box>
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+              <Pagination
+                count={totalPages}
+                page={page}
+                onChange={handlePageChange}
+                color="primary"
+              />
+            </Box>
+          </>
+        )}
       </Paper>
     </Container>
   );

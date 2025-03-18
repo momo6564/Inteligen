@@ -1,30 +1,18 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   Container,
-  Box,
+  Paper,
   Typography,
   Grid,
-  Rating,
+  Box,
   Button,
+  CircularProgress,
+  Alert,
   Divider,
+  Rating,
   Chip,
-  IconButton,
-  useTheme,
-  alpha,
-  Card,
-  CardContent,
 } from '@mui/material';
-import {
-  Phone,
-  Email,
-  LocationOn,
-  Language,
-  Instagram,
-  Refresh as RefreshIcon,
-  Business as BusinessIcon,
-  Category as CategoryIcon,
-} from '@mui/icons-material';
 
 interface Business {
   _id: string;
@@ -36,264 +24,328 @@ interface Business {
   memberClass: string;
   designation: string;
   category: string;
-  address: string;
+  address: string | {
+    street: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    country: string;
+  };
   mobile: string;
   email: string;
-  description?: string;
-  location?: string;
-  hasPublicPresence?: boolean;
-  links?: string[];
+  description: string;
+  contact?: {
+    phone: string;
+    email: string;
+    website: string;
+  };
+  hours?: {
+    monday: { open: string; close: string };
+    tuesday: { open: string; close: string };
+    wednesday: { open: string; close: string };
+    thursday: { open: string; close: string };
+    friday: { open: string; close: string };
+    saturday: { open: string; close: string };
+    sunday: { open: string; close: string };
+  };
+  images: string[];
+  rating: number;
+  reviews: Array<{
+    _id: string;
+    rating: number;
+    comment: string;
+    reviewerName: string;
+    createdAt: string;
+  }>;
+  socialMedia?: {
+    instagram: string;
+    facebook: string;
+    linkedin: string;
+    twitter: string;
+  };
+  scrapingStatus: string;
 }
 
 const BusinessProfile: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [business, setBusiness] = useState<Business | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const theme = useTheme();
-
-  const fetchBusiness = useCallback(async () => {
-    try {
-      const apiUrl = process.env.NODE_ENV === 'production' 
-        ? process.env.REACT_APP_API_URL_PROD 
-        : process.env.REACT_APP_API_URL;
-
-      const response = await fetch(`${apiUrl}/api/businesses/${id}`);
-      if (!response.ok) {
-        throw new Error('Business not found');
-      }
-      const data = await response.json();
-      setBusiness(data);
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'An error occurred');
-    } finally {
-      setLoading(false);
-    }
-  }, [id]);
 
   useEffect(() => {
-    fetchBusiness();
-  }, [fetchBusiness]);
+    const fetchBusiness = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const apiUrl = process.env.NODE_ENV === 'production'
+          ? process.env.REACT_APP_API_URL_PROD
+          : process.env.REACT_APP_API_URL;
 
-  const handleRefreshScrape = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch(`http://localhost:5000/api/businesses/${id}/scrape`, {
-        method: 'POST',
-      });
-      const data = await response.json();
-      setBusiness(data);
-    } catch (error) {
-      console.error('Error refreshing scrape:', error);
-    } finally {
-      setLoading(false);
+        const response = await fetch(`${apiUrl}/businesses/${id}`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch business details');
+        }
+
+        const data = await response.json();
+        setBusiness(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'An error occurred while fetching business details');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) {
+      fetchBusiness();
     }
-  };
+  }, [id]);
 
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
-        <Typography>Loading...</Typography>
+        <CircularProgress />
       </Box>
     );
   }
 
   if (error || !business) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
-        <Typography color="error">{error || 'Business not found'}</Typography>
-      </Box>
+      <Container maxWidth="lg">
+        <Alert severity="error" sx={{ mt: 4 }}>{error || 'Business not found'}</Alert>
+      </Container>
     );
   }
 
-  return (
-    <Box sx={{ bgcolor: '#f5f5f5', minHeight: '100vh', pb: 8 }}>
-      {/* Hero Section */}
-      <Box 
-        sx={{ 
-          height: 300,
-          bgcolor: theme.palette.primary.main,
-          backgroundImage: 'linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url("/business-hero.jpg")',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          display: 'flex',
-          alignItems: 'flex-end',
-          mb: 4
-        }}
-      >
-        <Container sx={{ mb: 4 }}>
-          <Typography variant="h2" sx={{ color: 'white', fontWeight: 'bold', mb: 2 }}>
-            {business.name}
-          </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-            <Rating value={4} readOnly />
-            <Typography sx={{ color: 'white' }}>4.0 (25 reviews)</Typography>
-            <Chip 
-              label={business.category || 'Manufacturing'} 
-              sx={{ 
-                bgcolor: alpha(theme.palette.primary.main, 0.9),
-                color: 'white',
-                '& .MuiChip-icon': { color: 'white' }
-              }}
-              icon={<CategoryIcon />}
-            />
-          </Box>
-          <Button
-            variant="contained"
-            onClick={handleRefreshScrape}
-            startIcon={<RefreshIcon />}
-            sx={{ 
-              bgcolor: 'white', 
-              color: theme.palette.primary.main,
-              '&:hover': {
-                bgcolor: alpha(theme.palette.primary.main, 0.1),
-              }
-            }}
-          >
-            Refresh Info
-          </Button>
-        </Container>
-      </Box>
+  // Helper function to get contact information
+  const getContactInfo = (field: 'phone' | 'email' | 'website') => {
+    return business.contact?.[field] || business[field] || 'N/A';
+  };
 
-      <Container>
+  // Helper function to get address
+  const getAddress = () => {
+    if (typeof business.address === 'string') {
+      return business.address;
+    }
+    const addr = business.address as { street: string; city: string; state: string; zipCode: string; country: string };
+    return `${addr.street || ''}, ${addr.city || ''}, ${addr.state || ''} ${addr.zipCode || ''}, ${addr.country || ''}`;
+  };
+
+  return (
+    <Container maxWidth="lg">
+      <Paper sx={{ p: 4, mt: 4 }}>
         <Grid container spacing={4}>
+          {/* Header Section */}
+          <Grid item xs={12}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="h4" component="h1">
+                {business.name}
+              </Typography>
+              <Button variant="outlined" onClick={() => navigate('/')}>
+                Back to List
+              </Button>
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+              <Rating value={business.rating} precision={0.5} readOnly />
+              <Typography variant="body1" color="text.secondary">
+                ({business.reviews.length} reviews)
+              </Typography>
+            </Box>
+            <Chip label={business.category || 'Uncategorized'} color="primary" sx={{ mb: 2 }} />
+          </Grid>
+
           {/* Main Content */}
           <Grid item xs={12} md={8}>
-            <Card sx={{ mb: 4 }}>
-              <CardContent>
-                <Typography variant="h5" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <BusinessIcon color="primary" />
-                  About the Business
-                </Typography>
-                <Typography variant="body1" color="text.secondary" paragraph>
-                  {business.description || 'A leading manufacturer and exporter based in Sialkot, Pakistan.'}
-                </Typography>
-                
-                <Divider sx={{ my: 3 }} />
-                
-                <Typography variant="h6" gutterBottom>Contact Information</Typography>
-                <Grid container spacing={2}>
-                  {business.location && (
-                    <Grid item xs={12}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <LocationOn color="action" />
-                        <Typography variant="body1" color="text.secondary">
-                          {business.location}
-                        </Typography>
-                      </Box>
-                    </Grid>
-                  )}
-                  {business.phone && (
-                    <Grid item xs={12} sm={6}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Phone color="action" />
-                        <Typography variant="body1" color="text.secondary">
-                          {business.phone}
-                        </Typography>
-                      </Box>
-                    </Grid>
-                  )}
-                  {business.email && (
-                    <Grid item xs={12} sm={6}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Email color="action" />
-                        <Typography variant="body1" color="text.secondary">
-                          {business.email}
-                        </Typography>
-                      </Box>
-                    </Grid>
-                  )}
-                </Grid>
-              </CardContent>
-            </Card>
+            <Typography variant="h6" gutterBottom>
+              About
+            </Typography>
+            <Typography paragraph>
+              {business.description || 'No description available.'}
+            </Typography>
 
-            <Card>
-              <CardContent>
-                <Typography variant="h5" gutterBottom>Reviews</Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
-                  <Typography variant="h3" sx={{ fontWeight: 'bold' }}>4.0</Typography>
-                  <Box>
-                    <Rating value={4} readOnly size="large" />
-                    <Typography variant="body2" color="text.secondary">
-                      Based on 25 reviews
-                    </Typography>
-                  </Box>
-                </Box>
-                <Button variant="contained" fullWidth>Write a Review</Button>
-              </CardContent>
-            </Card>
+            <Divider sx={{ my: 3 }} />
+
+            <Typography variant="h6" gutterBottom>
+              Contact Information
+            </Typography>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Phone
+                </Typography>
+                <Typography>{getContactInfo('phone')}</Typography>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Mobile
+                </Typography>
+                <Typography>{business.mobile || 'N/A'}</Typography>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Email
+                </Typography>
+                <Typography>{getContactInfo('email')}</Typography>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Website
+                </Typography>
+                <Typography>
+                  {getContactInfo('website') !== 'N/A' ? (
+                    <a href={getContactInfo('website')} target="_blank" rel="noopener noreferrer">
+                      {getContactInfo('website')}
+                    </a>
+                  ) : 'N/A'}
+                </Typography>
+              </Grid>
+            </Grid>
+
+            <Divider sx={{ my: 3 }} />
+
+            <Typography variant="h6" gutterBottom>
+              Business Details
+            </Typography>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Corporate ID
+                </Typography>
+                <Typography>{business.corporateId || 'N/A'}</Typography>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Member Class
+                </Typography>
+                <Typography>{business.memberClass || 'N/A'}</Typography>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Designation
+                </Typography>
+                <Typography>{business.designation || 'N/A'}</Typography>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Contact Person
+                </Typography>
+                <Typography>{business.contactPerson || 'N/A'}</Typography>
+              </Grid>
+            </Grid>
+
+            <Divider sx={{ my: 3 }} />
+
+            <Typography variant="h6" gutterBottom>
+              Address
+            </Typography>
+            <Typography>
+              {getAddress()}
+            </Typography>
+
+            {business.hours && (
+              <>
+                <Divider sx={{ my: 3 }} />
+                <Typography variant="h6" gutterBottom>
+                  Business Hours
+                </Typography>
+                <Grid container spacing={2}>
+                  {Object.entries(business.hours).map(([day, hours]) => (
+                    <Grid item xs={12} sm={6} key={day}>
+                      <Typography variant="subtitle2" sx={{ textTransform: 'capitalize' }}>
+                        {day}
+                      </Typography>
+                      <Typography>
+                        {hours.open} - {hours.close}
+                      </Typography>
+                    </Grid>
+                  ))}
+                </Grid>
+              </>
+            )}
           </Grid>
 
           {/* Sidebar */}
           <Grid item xs={12} md={4}>
-            <Card sx={{ mb: 4 }}>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>Business Website</Typography>
-                {business.website ? (
-                  <Button
-                    variant="contained"
-                    fullWidth
-                    href={business.website}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    startIcon={<Language />}
-                  >
-                    Visit Website
-                  </Button>
-                ) : (
-                  <Typography variant="body2" color="text.secondary">
-                    Website not available
-                  </Typography>
-                )}
+            {business.images.length > 0 && (
+              <Paper sx={{ p: 2, mb: 3 }}>
+                <Typography variant="h6" gutterBottom>
+                  Images
+                </Typography>
+                <Grid container spacing={2}>
+                  {business.images.map((image, index) => (
+                    <Grid item xs={12} key={index}>
+                      <img
+                        src={image}
+                        alt={`${business.name} - Image ${index + 1}`}
+                        style={{ width: '100%', height: 'auto', borderRadius: '4px' }}
+                      />
+                    </Grid>
+                  ))}
+                </Grid>
+              </Paper>
+            )}
 
-                {business.hasPublicPresence && business.links && business.links.length > 0 && (
-                  <>
-                    <Divider sx={{ my: 2 }} />
-                    <Typography variant="h6" gutterBottom>Social Media</Typography>
-                    <Box sx={{ display: 'flex', gap: 1 }}>
-                      {business.links.map((link, index) => (
-                        <IconButton
-                          key={index}
-                          href={link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          sx={{
-                            bgcolor: alpha(theme.palette.primary.main, 0.1),
-                            '&:hover': {
-                              bgcolor: alpha(theme.palette.primary.main, 0.2)
-                            }
-                          }}
-                        >
-                          {link.includes('instagram') ? <Instagram /> : <Language />}
-                        </IconButton>
-                      ))}
-                    </Box>
-                  </>
-                )}
-              </CardContent>
-            </Card>
+            {business.socialMedia && (
+              <Paper sx={{ p: 2 }}>
+                <Typography variant="h6" gutterBottom>
+                  Social Media
+                </Typography>
+                <Grid container spacing={2}>
+                  {Object.entries(business.socialMedia).map(([platform, url]) => (
+                    url && (
+                      <Grid item xs={6} key={platform}>
+                        <Typography variant="subtitle2" sx={{ textTransform: 'capitalize' }}>
+                          {platform}
+                        </Typography>
+                        <Typography>
+                          <a href={url} target="_blank" rel="noopener noreferrer">
+                            {url}
+                          </a>
+                        </Typography>
+                      </Grid>
+                    )
+                  ))}
+                </Grid>
+              </Paper>
+            )}
+          </Grid>
 
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>Business Hours</Typography>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="body2">Monday - Friday</Typography>
-                  <Typography variant="body2" color="text.secondary">9:00 AM - 5:00 PM</Typography>
-                </Box>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="body2">Saturday</Typography>
-                  <Typography variant="body2" color="text.secondary">10:00 AM - 2:00 PM</Typography>
-                </Box>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Typography variant="body2">Sunday</Typography>
-                  <Typography variant="body2" color="text.secondary">Closed</Typography>
-                </Box>
-              </CardContent>
-            </Card>
+          {/* Reviews Section */}
+          <Grid item xs={12}>
+            <Divider sx={{ my: 3 }} />
+            <Typography variant="h6" gutterBottom>
+              Reviews
+            </Typography>
+            {business.reviews.length === 0 ? (
+              <Typography color="text.secondary">
+                No reviews yet. Be the first to review this business!
+              </Typography>
+            ) : (
+              <Grid container spacing={3}>
+                {business.reviews.map((review) => (
+                  <Grid item xs={12} key={review._id}>
+                    <Paper sx={{ p: 2 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                        <Rating value={review.rating} size="small" readOnly />
+                        <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
+                          by {review.reviewerName}
+                        </Typography>
+                      </Box>
+                      <Typography variant="body1">
+                        {review.comment}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {new Date(review.createdAt).toLocaleDateString()}
+                      </Typography>
+                    </Paper>
+                  </Grid>
+                ))}
+              </Grid>
+            )}
           </Grid>
         </Grid>
-      </Container>
-    </Box>
+      </Paper>
+    </Container>
   );
 };
 

@@ -1,141 +1,92 @@
 const mongoose = require('mongoose');
 
-const machineSchema = new mongoose.Schema({
-  name: String,
-  description: String,
-  manufacturer: String,
-  yearOfManufacture: String,
-  specifications: String
-});
-
 const businessSchema = new mongoose.Schema({
   corporateId: {
     type: String,
-    required: true,
-    unique: true,
-    index: true // Adding index for better query performance
+    default: 'N/A'
   },
   name: {
     type: String,
     required: true,
-    index: true, // Adding index for search functionality
     trim: true
-  },
-  phone: {
-    type: String,
-    trim: true
-  },
-  website: {
-    type: String,
-    trim: true
-  },
-  // Additional scraped fields
-  contactPerson: {
-    type: String,
-    trim: true
-  },
-  memberClass: {
-    type: String,
-    default: 'N/A'
-  },
-  designation: {
-    type: String,
-    trim: true
-  },
-  category: {
-    type: String,
-    trim: true
-  },
-  address: {
-    type: String,
-    trim: true
-  },
-  mobile: {
-    type: String,
-    trim: true
-  },
-  email: {
-    type: String,
-    trim: true,
-    lowercase: true
   },
   description: {
     type: String,
-    trim: true
+    required: true
   },
-  businessType: {
+  category: {
     type: String,
-    trim: true
+    required: true,
+    enum: ['Restaurant', 'Retail', 'Service', 'Entertainment', 'Other']
   },
-  location: {
+  address: {
+    street: String,
+    city: String,
+    state: String,
+    zipCode: String,
+    country: String
+  },
+  contact: {
+    phone: String,
+    email: String,
+    website: String
+  },
+  phone: {
     type: String,
-    trim: true
+    default: 'N/A'
   },
-  isOpen: {
-    type: Boolean,
-    default: true
-  },
-  openToNewBusiness: {
-    type: Boolean,
-    default: true
-  },
-  hasPublicPresence: {
-    type: Boolean,
-    default: false
-  },
-  links: [{
+  website: {
     type: String,
-    trim: true
+    default: 'N/A'
+  },
+  contactPerson: {
+    type: String,
+    default: 'N/A'
+  },
+  memberClass: String,
+  designation: String,
+  mobile: String,
+  email: String,
+  hours: {
+    monday: { open: String, close: String },
+    tuesday: { open: String, close: String },
+    wednesday: { open: String, close: String },
+    thursday: { open: String, close: String },
+    friday: { open: String, close: String },
+    saturday: { open: String, close: String },
+    sunday: { open: String, close: String }
+  },
+  images: [{
+    type: String
   }],
-  machinery: [machineSchema],
-  // Add social media fields
+  rating: {
+    type: Number,
+    default: 0,
+    min: 0,
+    max: 5
+  },
+  reviews: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Review'
+  }],
   socialMedia: {
-    instagram: {
-      type: String,
-      trim: true
-    },
-    facebook: {
-      type: String,
-      trim: true
-    },
-    linkedin: {
-      type: String,
-      trim: true
-    },
-    twitter: {
-      type: String,
-      trim: true
-    }
+    instagram: String,
+    facebook: String,
+    linkedin: String,
+    twitter: String
   },
-  // First search result info
   searchResult: {
-    url: {
-      type: String,
-      trim: true
-    },
-    title: {
-      type: String,
-      trim: true
-    },
-    snippet: {
-      type: String,
-      trim: true
-    }
+    url: String,
+    title: String,
+    snippet: String
   },
-  // Detected category from search
-  detectedCategory: {
-    type: String,
-    trim: true
-  },
-  // Track scraping status
+  detectedCategory: String,
   scrapingStatus: {
     type: String,
     enum: ['pending', 'completed', 'failed'],
     default: 'pending'
   },
-  lastScraped: {
-    type: Date
-  },
+  lastScraped: Date,
   createdAt: {
     type: Date,
     default: Date.now
@@ -144,19 +95,6 @@ const businessSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   }
-}, {
-  timestamps: true // Adds createdAt and updatedAt fields
-});
-
-// Create index for location-based queries
-businessSchema.index({ location: '2dsphere' });
-
-// Add text index for search functionality
-businessSchema.index({ 
-  name: 'text', 
-  corporateId: 'text',
-  category: 'text',
-  contactPerson: 'text'
 });
 
 // Update the updatedAt timestamp before saving

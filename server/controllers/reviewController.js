@@ -1,5 +1,4 @@
-const Review = require('../models/Review');
-const Business = require('../models/business');
+const { Review, Business } = require('../models');
 
 // Get reviews for a business
 const getBusinessReviews = async (req, res) => {

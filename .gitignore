@@ -9,11 +9,15 @@ node_modules/
 .env.development.local
 .env.test.local
 .env.production.local
+client/.env
+client/.env.production
+server/.env
 
-# Build outputs
+# Build files
 /build
 /dist
 /client/build
+/client/dist
 
 # Debug logs
 npm-debug.log*
