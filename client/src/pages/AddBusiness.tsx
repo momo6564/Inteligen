@@ -9,15 +9,13 @@ import {
   Button,
   Grid,
   Box,
-  FormControlLabel,
-  Switch,
-  Divider,
   Alert,
   MenuItem,
   FormControl,
   InputLabel,
   Select,
   SelectChangeEvent,
+  Divider,
 } from '@mui/material';
 
 interface BusinessFormData {
@@ -138,9 +136,7 @@ const AddBusiness: React.FC = () => {
     setImportError(null);
 
     try {
-      const apiUrl = process.env.NODE_ENV === 'production'
-        ? process.env.REACT_APP_API_URL_PROD
-        : process.env.REACT_APP_API_URL;
+      const apiUrl = process.env.REACT_APP_API_URL;
 
       const response = await fetch(`${apiUrl}/businesses`, {
         method: 'POST',
@@ -178,12 +174,10 @@ const AddBusiness: React.FC = () => {
         const worksheet = workbook.Sheets[sheetName];
         const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
-        const apiUrl = process.env.NODE_ENV === 'production' 
-          ? process.env.REACT_APP_API_URL_PROD 
-          : process.env.REACT_APP_API_URL;
+        const apiUrl = process.env.REACT_APP_API_URL;
 
         try {
-          const response = await fetch(`${apiUrl}/api/businesses/bulk`, {
+          const response = await fetch(`${apiUrl}/businesses/bulk`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

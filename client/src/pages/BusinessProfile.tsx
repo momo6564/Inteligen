@@ -78,9 +78,7 @@ const BusinessProfile: React.FC = () => {
       try {
         setLoading(true);
         setError(null);
-        const apiUrl = process.env.NODE_ENV === 'production'
-          ? process.env.REACT_APP_API_URL_PROD
-          : process.env.REACT_APP_API_URL;
+        const apiUrl = process.env.REACT_APP_API_URL;
 
         const response = await fetch(`${apiUrl}/businesses/${id}`);
         if (!response.ok) {
@@ -276,7 +274,7 @@ const BusinessProfile: React.FC = () => {
                     <Grid item xs={12} key={index}>
                       <img
                         src={image}
-                        alt={`${business.name} - Image ${index + 1}`}
+                        alt={`${business.name} ${index + 1}`}
                         style={{ width: '100%', height: 'auto', borderRadius: '4px' }}
                       />
                     </Grid>
