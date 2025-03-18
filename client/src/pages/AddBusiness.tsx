@@ -136,6 +136,8 @@ const AddBusiness: React.FC = () => {
 
     try {
       const apiUrl = process.env.REACT_APP_API_URL;
+      console.log('Using API URL:', apiUrl);
+      console.log('Submitting form data:', formData);
 
       const response = await fetch(`${apiUrl}/businesses`, {
         method: 'POST',
@@ -145,13 +147,17 @@ const AddBusiness: React.FC = () => {
         body: JSON.stringify(formData),
       });
 
+      console.log('Response status:', response.status);
+
       if (!response.ok) {
         throw new Error('Failed to add business');
       }
 
       const data = await response.json();
+      console.log('Response data:', data);
       navigate(`/business/${data._id}`);
     } catch (err) {
+      console.error('Error adding business:', err);
       setImportError(err instanceof Error ? err.message : 'An error occurred while adding the business');
     } finally {
       setLoading(false);

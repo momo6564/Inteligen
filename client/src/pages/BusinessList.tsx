@@ -35,6 +35,7 @@ interface Business {
 interface ApiResponse {
   businesses: Business[];
   totalPages: number;
+  totalBusinesses: number;
 }
 
 const BusinessList: React.FC = () => {
@@ -42,6 +43,7 @@ const BusinessList: React.FC = () => {
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalBusinesses, setTotalBusinesses] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [showScrapedOnly, setShowScrapedOnly] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -51,21 +53,22 @@ const BusinessList: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      const apiUrl = process.env.NODE_ENV === 'production' 
-        ? process.env.REACT_APP_API_URL_PROD 
-        : process.env.REACT_APP_API_URL;
+      
+      const apiUrl = process.env.REACT_APP_API_URL;
+      console.log('Using API URL:', apiUrl);
 
-      const response = await fetch(
-        `${apiUrl}/businesses?page=${page}&limit=12&scrapedOnly=${showScrapedOnly}`
-      );
+      const response = await fetch(`${apiUrl}/businesses?page=${page}&showScrapedOnly=${showScrapedOnly}`);
+      
+      console.log('Response status:', response.status);
       
       if (!response.ok) {
         throw new Error('Failed to fetch businesses');
       }
-      
-      const data: ApiResponse = await response.json();
+
+      const data = await response.json();
       setBusinesses(data.businesses);
       setTotalPages(data.totalPages);
+      setTotalBusinesses(data.totalBusinesses);
     } catch (error) {
       setError(error instanceof Error ? error.message : 'An error occurred while fetching businesses');
       console.error('Error fetching businesses:', error);

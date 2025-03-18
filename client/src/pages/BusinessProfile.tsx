@@ -79,15 +79,21 @@ const BusinessProfile: React.FC = () => {
         setLoading(true);
         setError(null);
         const apiUrl = process.env.REACT_APP_API_URL;
+        console.log('Using API URL:', apiUrl);
+        console.log('Fetching business with ID:', id);
 
         const response = await fetch(`${apiUrl}/businesses/${id}`);
+        console.log('Response status:', response.status);
+        
         if (!response.ok) {
           throw new Error('Failed to fetch business details');
         }
 
         const data = await response.json();
+        console.log('Business data:', data);
         setBusiness(data);
       } catch (err) {
+        console.error('Error fetching business:', err);
         setError(err instanceof Error ? err.message : 'An error occurred while fetching business details');
       } finally {
         setLoading(false);
