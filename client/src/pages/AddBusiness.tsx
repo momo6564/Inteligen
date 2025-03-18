@@ -1,6 +1,5 @@
 import React, { useState, ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import * as XLSX from 'xlsx';
 import {
   Container,
   Paper,
@@ -159,56 +158,6 @@ const AddBusiness: React.FC = () => {
     }
   };
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    setImportError(null);
-
-    if (!file) return;
-
-    try {
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const data = e.target?.result;
-        const workbook = XLSX.read(data, { type: 'binary' });
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        const jsonData = XLSX.utils.sheet_to_json(worksheet);
-
-        const apiUrl = process.env.REACT_APP_API_URL;
-
-        try {
-          const response = await fetch(`${apiUrl}/businesses/bulk`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ businesses: jsonData }),
-          });
-
-          if (!response.ok) {
-            throw new Error('Failed to import businesses');
-          }
-
-          const result = await response.json();
-          console.log('Import successful:', result);
-          navigate('/businesses');
-        } catch (error) {
-          setImportError('Failed to import businesses. Please check your spreadsheet format.');
-          console.error('Import error:', error);
-        }
-      };
-
-      reader.onerror = () => {
-        setImportError('Error reading file');
-      };
-
-      reader.readAsBinaryString(file);
-    } catch (error) {
-      setImportError('Error processing file');
-      console.error('File processing error:', error);
-    }
-  };
-
   return (
     <Container maxWidth="lg">
       <Paper sx={{ p: 4, mt: 4 }}>
@@ -221,33 +170,6 @@ const AddBusiness: React.FC = () => {
             {importError}
           </Alert>
         )}
-
-        <Box sx={{ mb: 4 }}>
-          <Typography variant="h5" gutterBottom>
-            Bulk Import Businesses
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Upload an Excel spreadsheet (.xlsx) containing businesses. Only the name column is required.
-          </Typography>
-          <input
-            accept=".xlsx,.xls"
-            style={{ display: 'none' }}
-            id="raised-button-file"
-            type="file"
-            onChange={handleFileUpload}
-          />
-          <label htmlFor="raised-button-file">
-            <Button variant="contained" component="span">
-              Upload Spreadsheet
-            </Button>
-          </label>
-        </Box>
-
-        <Divider sx={{ my: 4 }} />
-
-        <Typography variant="h5" gutterBottom>
-          Or Add Single Business
-        </Typography>
 
         <form onSubmit={handleSubmit}>
           <Grid container spacing={3}>

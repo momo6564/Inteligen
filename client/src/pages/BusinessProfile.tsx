@@ -274,7 +274,7 @@ const BusinessProfile: React.FC = () => {
                     <Grid item xs={12} key={index}>
                       <img
                         src={image}
-                        alt={`${business.name} ${index + 1}`}
+                        alt={`${business.name} #${index + 1}`}
                         style={{ width: '100%', height: 'auto', borderRadius: '4px' }}
                       />
                     </Grid>
