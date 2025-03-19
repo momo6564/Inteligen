@@ -71,17 +71,16 @@ const Logo = styled('img')({
 interface Business {
   _id: string;
   name: string;
-  description: string;
-  category: string;
-  address: string;
-  phone: string;
-  email: string;
-  website: string;
-  hours: {
-    [key: string]: string;
-  };
-  rating: number;
-  reviews: Array<{
+  description?: string;
+  category?: string;
+  address: string | Record<string, any>;
+  phone?: string;
+  email?: string;
+  website?: string;
+  hours?: Record<string, string>;
+  rating?: number;
+  reviewCount?: number;
+  reviews?: Array<{
     _id: string;
     rating: number;
     comment: string;
@@ -90,6 +89,16 @@ interface Business {
   }>;
   logo?: string;
   coverPhoto?: string;
+  corporateId?: string;
+  contactPerson?: string;
+  designation?: string;
+  memberClass?: string;
+  mobile?: string;
+  contact?: {
+    phone?: string;
+    email?: string;
+    website?: string;
+  };
 }
 
 const BusinessProfile: React.FC = () => {
@@ -115,19 +124,63 @@ const BusinessProfile: React.FC = () => {
         console.log('Using API URL:', apiUrl);
         console.log('Fetching business with ID:', id);
 
-        const response = await fetch(`${apiUrl}/businesses/${id}`);
-        console.log('Response status:', response.status);
-        
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.message || 'Failed to fetch business details');
+        // Use the first business from the list as a fallback if direct fetch fails
+        let business = null;
+        let error = null;
+
+        try {
+          // First try to fetch the specific business
+          const response = await fetch(`${apiUrl}/businesses/${id}`);
+          console.log('Response status for specific business:', response.status);
+          
+          if (response.ok) {
+            business = await response.json();
+            console.log('Found specific business:', business);
+          } else {
+            console.log('Failed to fetch specific business, trying list');
+            error = await response.json();
+          }
+        } catch (err) {
+          console.error('Error fetching specific business:', err);
         }
 
-        const data = await response.json();
-        console.log('Business data:', data);
-        setBusiness(data);
+        // If specific business fetch failed, try to get it from the list
+        if (!business) {
+          try {
+            const listResponse = await fetch(`${apiUrl}/businesses?limit=100`);
+            console.log('List response status:', listResponse.status);
+            
+            if (listResponse.ok) {
+              const data = await listResponse.json();
+              console.log(`Found ${data.businesses.length} businesses in list`);
+              
+              // Find business by ID in the list
+              business = data.businesses.find((b: any) => b._id === id);
+              
+              if (business) {
+                console.log('Found business in list:', business);
+              } else {
+                throw new Error('Business not found in list');
+              }
+            } else {
+              throw new Error('Failed to fetch business list');
+            }
+          } catch (err) {
+            console.error('Error fetching business list:', err);
+            if (!error) {
+              error = { message: err instanceof Error ? err.message : 'Unknown error' };
+            }
+          }
+        }
+
+        if (business) {
+          console.log('Final business data to use:', business);
+          setBusiness(business);
+        } else {
+          throw new Error(error?.message || 'Failed to fetch business details');
+        }
       } catch (err) {
-        console.error('Error fetching business:', err);
+        console.error('Error in business fetch process:', err);
         setError(err instanceof Error ? err.message : 'An error occurred while fetching business details');
       } finally {
         setLoading(false);
@@ -186,6 +239,52 @@ const BusinessProfile: React.FC = () => {
     }
   };
 
+  // Helper function to get formatted address
+  const getFormattedAddress = () => {
+    if (!business) return '';
+    
+    if (typeof business.address === 'string') {
+      return business.address;
+    }
+    
+    if (typeof business.address === 'object') {
+      const addr = business.address as Record<string, any>;
+      if (addr.street || addr.city) {
+        return `${addr.street || ''}, ${addr.city || ''} ${addr.state || ''} ${addr.zipCode || ''}, ${addr.country || ''}`.trim();
+      }
+    }
+    
+    return 'Address not available';
+  };
+
+  // Helper function to safely access properties
+  const getContactInfo = (field: 'phone' | 'email' | 'website') => {
+    if (!business) return '';
+    
+    // First check if it's directly on the business object
+    if (business[field]) {
+      return business[field];
+    }
+    
+    // Then check if it's in the contact object
+    if (business.contact && business.contact[field]) {
+      return business.contact[field];
+    }
+    
+    // If phone is requested, try mobile as fallback
+    if (field === 'phone' && business.mobile) {
+      return business.mobile;
+    }
+    
+    return '';
+  };
+
+  // Helper to get reviews safely
+  const getReviews = () => {
+    if (!business) return [];
+    return business.reviews || [];
+  };
+
   if (loading) {
     return (
       <Container sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh' }}>
@@ -224,7 +323,7 @@ const BusinessProfile: React.FC = () => {
     <Box>
       <CoverPhoto
         sx={{
-          backgroundImage: business.coverPhoto
+          backgroundImage: business?.coverPhoto
             ? `url(${business.coverPhoto})`
             : 'url(https://source.unsplash.com/random/1600x900/?restaurant)',
         }}
@@ -251,8 +350,8 @@ const BusinessProfile: React.FC = () => {
 
       <LogoContainer>
         <Logo
-          src={business.logo || 'https://source.unsplash.com/random/150x150/?logo'}
-          alt={business.name}
+          src={business?.logo || 'https://source.unsplash.com/random/150x150/?logo'}
+          alt={business?.name || 'Business Logo'}
         />
         <IconButton
           sx={{
@@ -278,19 +377,22 @@ const BusinessProfile: React.FC = () => {
           <Grid item xs={12} md={8}>
             <Paper sx={{ p: 3 }}>
               <Typography variant="h4" gutterBottom>
-                {business.name}
+                {business?.name}
               </Typography>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <Rating value={business.rating} precision={0.5} readOnly />
+                <Rating value={business?.rating || 0} precision={0.5} readOnly />
                 <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
-                  ({business.reviews.length} reviews)
+                  ({business?.reviewCount || getReviews().length || 0} reviews)
                 </Typography>
               </Box>
               <Typography variant="body1" paragraph>
-                {business.description}
+                {business?.description || 'No description available'}
               </Typography>
               <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-                <Chip label={business.category} color="primary" />
+                <Chip label={business?.category || 'General'} color="primary" />
+                {business?.memberClass && (
+                  <Chip label={business.memberClass} color="secondary" />
+                )}
               </Box>
             </Paper>
 
@@ -298,17 +400,23 @@ const BusinessProfile: React.FC = () => {
               <Typography variant="h6" gutterBottom>
                 Reviews
               </Typography>
-              {business.reviews.map((review) => (
-                <Box key={review._id} sx={{ mb: 2 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <Rating value={review.rating} size="small" readOnly />
-                    <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
-                      by {review.reviewerName}
-                    </Typography>
+              {getReviews().length > 0 ? (
+                getReviews().map((review) => (
+                  <Box key={review._id} sx={{ mb: 2 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                      <Rating value={review.rating} size="small" readOnly />
+                      <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
+                        by {review.reviewerName}
+                      </Typography>
+                    </Box>
+                    <Typography variant="body2">{review.comment}</Typography>
                   </Box>
-                  <Typography variant="body2">{review.comment}</Typography>
-                </Box>
-              ))}
+                ))
+              ) : (
+                <Typography variant="body2" color="text.secondary">
+                  No reviews available yet. Be the first to review!
+                </Typography>
+              )}
             </Paper>
           </Grid>
 
@@ -319,38 +427,39 @@ const BusinessProfile: React.FC = () => {
               </Typography>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                 <LocationOn sx={{ mr: 1, color: 'primary.main' }} />
-                <Typography variant="body2">{business.address}</Typography>
+                <Typography variant="body2">{getFormattedAddress()}</Typography>
               </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <Phone sx={{ mr: 1, color: 'primary.main' }} />
-                <Typography variant="body2">{business.phone}</Typography>
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <Email sx={{ mr: 1, color: 'primary.main' }} />
-                <Typography variant="body2">{business.email}</Typography>
-              </Box>
-              {business.website && (
+              {getContactInfo('phone') && (
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <Phone sx={{ mr: 1, color: 'primary.main' }} />
+                  <Typography variant="body2">{getContactInfo('phone')}</Typography>
+                </Box>
+              )}
+              {getContactInfo('email') && (
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <Email sx={{ mr: 1, color: 'primary.main' }} />
+                  <Typography variant="body2">{getContactInfo('email')}</Typography>
+                </Box>
+              )}
+              {getContactInfo('website') && (
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                   <Language sx={{ mr: 1, color: 'primary.main' }} />
                   <Typography variant="body2">
-                    <a href={business.website} target="_blank" rel="noopener noreferrer">
-                      {business.website}
+                    <a href={getContactInfo('website')} target="_blank" rel="noopener noreferrer">
+                      Visit Website
                     </a>
                   </Typography>
                 </Box>
               )}
-              <Divider sx={{ my: 2 }} />
-              <Typography variant="h6" gutterBottom>
-                Business Hours
-              </Typography>
-              {Object.entries(business.hours).map(([day, hours]) => (
-                <Box key={day} sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="body2" sx={{ textTransform: 'capitalize' }}>
-                    {day}
+              {business?.contactPerson && (
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <Business sx={{ mr: 1, color: 'primary.main' }} />
+                  <Typography variant="body2">
+                    Contact: {business.contactPerson}
+                    {business.designation && ` (${business.designation})`}
                   </Typography>
-                  <Typography variant="body2">{hours}</Typography>
                 </Box>
-              ))}
+              )}
             </Paper>
           </Grid>
         </Grid>
