@@ -7,6 +7,7 @@ const {
   updateBusiness,
   deleteBusiness
 } = require('../controllers/businessController');
+const { upload, uploadImage } = require('../controllers/imageController');
 
 // Get all businesses with pagination
 router.get('/', getBusinesses);
@@ -22,5 +23,8 @@ router.put('/:id', updateBusiness);
 
 // Delete a business
 router.delete('/:id', deleteBusiness);
+
+// Image upload route
+router.post('/:businessId/upload', upload.single('file'), uploadImage);
 
 module.exports = router; 
