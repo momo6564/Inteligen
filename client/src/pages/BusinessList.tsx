@@ -21,6 +21,7 @@ import {
   IconButton,
   InputAdornment,
 } from '@mui/material';
+import Button from '@mui/material/Button';
 import {
   Search as SearchIcon,
   LocationOn,
