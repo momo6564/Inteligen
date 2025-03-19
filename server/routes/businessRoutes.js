@@ -7,7 +7,7 @@ const {
   updateBusiness,
   deleteBusiness
 } = require('../controllers/businessController');
-const { upload, uploadImage, handleMulterError } = require('../controllers/imageController');
+const { uploadImage } = require('../controllers/imageController');
 
 // Get all businesses with pagination
 router.get('/', getBusinesses);
@@ -24,7 +24,7 @@ router.put('/:id', updateBusiness);
 // Delete a business
 router.delete('/:id', deleteBusiness);
 
-// Image upload route
-router.post('/:businessId/upload', upload.single('file'), handleMulterError, uploadImage);
+// Image upload route (simplified version without multer)
+router.post('/:businessId/upload', uploadImage);
 
 module.exports = router; 

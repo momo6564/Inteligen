@@ -32,66 +32,13 @@ import {
 } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
 
-interface Business {
-  _id: string;
-  name: string;
-  corporateId: string;
-  phone: string;
-  website: string;
-  contactPerson: string;
-  memberClass: string;
-  designation: string;
-  category: string;
-  address: string | {
-    street: string;
-    city: string;
-    state: string;
-    zipCode: string;
-    country: string;
-  };
-  mobile: string;
-  email: string;
-  description: string;
-  contact?: {
-    phone: string;
-    email: string;
-    website: string;
-  };
-  hours?: {
-    monday: { open: string; close: string };
-    tuesday: { open: string; close: string };
-    wednesday: { open: string; close: string };
-    thursday: { open: string; close: string };
-    friday: { open: string; close: string };
-    saturday: { open: string; close: string };
-    sunday: { open: string; close: string };
-  };
-  images: string[];
-  rating: number;
-  reviews: Array<{
-    _id: string;
-    rating: number;
-    comment: string;
-    reviewerName: string;
-    createdAt: string;
-  }>;
-  socialMedia?: {
-    instagram: string;
-    facebook: string;
-    linkedin: string;
-    twitter: string;
-  };
-  scrapingStatus: string;
-  coverPhoto?: string;
-  reviewCount?: number;
-}
-
+// Styled components
 const CoverPhoto = styled('div')(({ theme }) => ({
   height: '300px',
   backgroundSize: 'cover',
   backgroundPosition: 'center',
   position: 'relative',
-  '&::after': {
+  '&::before': {
     content: '""',
     position: 'absolute',
     top: 0,
@@ -106,12 +53,12 @@ const LogoContainer = styled('div')(({ theme }) => ({
   position: 'absolute',
   bottom: '-50px',
   left: '50px',
-  width: '120px',
-  height: '120px',
-  borderRadius: '8px',
+  width: '150px',
+  height: '150px',
+  borderRadius: '50%',
   overflow: 'hidden',
   border: '4px solid white',
-  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+  boxShadow: theme.shadows[3],
 }));
 
 const Logo = styled('img')({
@@ -119,6 +66,31 @@ const Logo = styled('img')({
   height: '100%',
   objectFit: 'cover',
 });
+
+// Interfaces
+interface Business {
+  _id: string;
+  name: string;
+  description: string;
+  category: string;
+  address: string;
+  phone: string;
+  email: string;
+  website: string;
+  hours: {
+    [key: string]: string;
+  };
+  rating: number;
+  reviews: Array<{
+    _id: string;
+    rating: number;
+    comment: string;
+    reviewerName: string;
+    createdAt: string;
+  }>;
+  logo?: string;
+  coverPhoto?: string;
+}
 
 const BusinessProfile: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -139,6 +111,7 @@ const BusinessProfile: React.FC = () => {
         const apiUrl = process.env.NODE_ENV === 'production'
           ? process.env.REACT_APP_API_URL_PROD
           : process.env.REACT_APP_API_URL;
+        
         console.log('Using API URL:', apiUrl);
         console.log('Fetching business with ID:', id);
 
@@ -146,7 +119,8 @@ const BusinessProfile: React.FC = () => {
         console.log('Response status:', response.status);
         
         if (!response.ok) {
-          throw new Error('Failed to fetch business details');
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.message || 'Failed to fetch business details');
         }
 
         const data = await response.json();
@@ -178,24 +152,26 @@ const BusinessProfile: React.FC = () => {
   };
 
   const handleUpload = async () => {
-    if (!selectedFile || !uploadType) return;
-
+    if (!uploadType || !id) return;
+    
     try {
-      const formData = new FormData();
-      formData.append('file', selectedFile);
-      formData.append('type', uploadType);
-
+      setLoading(true);
       const apiUrl = process.env.NODE_ENV === 'production'
         ? process.env.REACT_APP_API_URL_PROD
         : process.env.REACT_APP_API_URL;
 
+      // Using simplified API that doesn't need actual file upload
       const response = await fetch(`${apiUrl}/businesses/${id}/upload`, {
         method: 'POST',
-        body: formData,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ type: uploadType }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to upload image');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to update image');
       }
 
       const updatedBusiness = await response.json();
@@ -204,47 +180,53 @@ const BusinessProfile: React.FC = () => {
       setSelectedFile(null);
       setPreviewUrl(null);
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Failed to upload image');
+      setError(error instanceof Error ? error.message : 'Failed to update image');
+    } finally {
+      setLoading(false);
     }
   };
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
+      <Container sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh' }}>
         <CircularProgress />
-      </Box>
-    );
-  }
-
-  if (error || !business) {
-    return (
-      <Container maxWidth="md" sx={{ mt: 4 }}>
-        <Alert severity="error">{error || 'Business not found'}</Alert>
       </Container>
     );
   }
 
-  // Helper function to get contact information
-  const getContactInfo = (field: 'phone' | 'email' | 'website') => {
-    return business.contact?.[field] || business[field] || 'N/A';
-  };
+  if (error) {
+    return (
+      <Container sx={{ mt: 4 }}>
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+        <Button variant="contained" onClick={() => navigate('/')}>
+          Back to Home
+        </Button>
+      </Container>
+    );
+  }
 
-  // Helper function to get address
-  const getAddress = () => {
-    if (typeof business.address === 'string') {
-      return business.address;
-    }
-    const addr = business.address as { street: string; city: string; state: string; zipCode: string; country: string };
-    return `${addr.street || ''}, ${addr.city || ''}, ${addr.state || ''} ${addr.zipCode || ''}, ${addr.country || ''}`;
-  };
+  if (!business) {
+    return (
+      <Container sx={{ mt: 4 }}>
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          Business not found
+        </Alert>
+        <Button variant="contained" onClick={() => navigate('/')}>
+          Back to Home
+        </Button>
+      </Container>
+    );
+  }
 
   return (
     <Box>
       <CoverPhoto
-        style={{
+        sx={{
           backgroundImage: business.coverPhoto
             ? `url(${business.coverPhoto})`
-            : 'url(https://source.unsplash.com/random/1600x900/?business)',
+            : 'url(https://source.unsplash.com/random/1600x900/?restaurant)',
         }}
       >
         <IconButton
@@ -267,108 +249,115 @@ const BusinessProfile: React.FC = () => {
         </IconButton>
       </CoverPhoto>
 
-      <Container maxWidth="lg" sx={{ mt: 8, mb: 4 }}>
+      <LogoContainer>
+        <Logo
+          src={business.logo || 'https://source.unsplash.com/random/150x150/?logo'}
+          alt={business.name}
+        />
+        <IconButton
+          sx={{
+            position: 'absolute',
+            bottom: 0,
+            right: 0,
+            backgroundColor: 'white',
+            '&:hover': {
+              backgroundColor: 'grey.100',
+            },
+          }}
+          onClick={() => {
+            setUploadType('logo');
+            setUploadDialogOpen(true);
+          }}
+        >
+          <PhotoCamera />
+        </IconButton>
+      </LogoContainer>
+
+      <Container sx={{ mt: 8, mb: 4 }}>
         <Grid container spacing={4}>
           <Grid item xs={12} md={8}>
-            <Box sx={{ mb: 4 }}>
-              <Typography variant="h4" component="h1" gutterBottom>
+            <Paper sx={{ p: 3 }}>
+              <Typography variant="h4" gutterBottom>
                 {business.name}
               </Typography>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <Rating value={business.rating || 0} precision={0.5} readOnly />
-                <Typography variant="body2" sx={{ ml: 1 }}>
-                  ({business.reviewCount || 0} reviews)
+                <Rating value={business.rating} precision={0.5} readOnly />
+                <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
+                  ({business.reviews.length} reviews)
                 </Typography>
               </Box>
-              <Typography variant="subtitle1" color="text.secondary">
-                {business.category}
-              </Typography>
-            </Box>
-
-            <Paper sx={{ p: 3, mb: 4 }}>
-              <Typography variant="h6" gutterBottom>
-                About
-              </Typography>
               <Typography variant="body1" paragraph>
-                {business.description || 'No description available.'}
+                {business.description}
               </Typography>
+              <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+                <Chip label={business.category} color="primary" />
+              </Box>
             </Paper>
 
-            <Paper sx={{ p: 3, mb: 4 }}>
+            <Paper sx={{ p: 3, mt: 3 }}>
               <Typography variant="h6" gutterBottom>
-                Business Hours
+                Reviews
               </Typography>
-              {business.hours && Object.entries(business.hours).map(([day, hours]: [string, any]) => (
-                <Box key={day} sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="body2">{day}</Typography>
-                  <Typography variant="body2">
-                    {hours.open} - {hours.close}
-                  </Typography>
+              {business.reviews.map((review) => (
+                <Box key={review._id} sx={{ mb: 2 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    <Rating value={review.rating} size="small" readOnly />
+                    <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
+                      by {review.reviewerName}
+                    </Typography>
+                  </Box>
+                  <Typography variant="body2">{review.comment}</Typography>
                 </Box>
               ))}
             </Paper>
           </Grid>
 
           <Grid item xs={12} md={4}>
-            <Paper sx={{ p: 3, mb: 4 }}>
+            <Paper sx={{ p: 3 }}>
+              <Typography variant="h6" gutterBottom>
+                Contact Information
+              </Typography>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                 <LocationOn sx={{ mr: 1, color: 'primary.main' }} />
-                <Typography variant="body1">{getAddress()}</Typography>
+                <Typography variant="body2">{business.address}</Typography>
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                 <Phone sx={{ mr: 1, color: 'primary.main' }} />
-                <Typography variant="body1">{getContactInfo('phone')}</Typography>
+                <Typography variant="body2">{business.phone}</Typography>
               </Box>
-              {business.email && (
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                  <Email sx={{ mr: 1, color: 'primary.main' }} />
-                  <Typography variant="body1">{getContactInfo('email')}</Typography>
-                </Box>
-              )}
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <Email sx={{ mr: 1, color: 'primary.main' }} />
+                <Typography variant="body2">{business.email}</Typography>
+              </Box>
               {business.website && (
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                   <Language sx={{ mr: 1, color: 'primary.main' }} />
-                  <Typography variant="body1">
-                    <a href={getContactInfo('website')} target="_blank" rel="noopener noreferrer">
-                      Visit Website
+                  <Typography variant="body2">
+                    <a href={business.website} target="_blank" rel="noopener noreferrer">
+                      {business.website}
                     </a>
                   </Typography>
                 </Box>
               )}
-            </Paper>
-
-            <Paper sx={{ p: 3 }}>
+              <Divider sx={{ my: 2 }} />
               <Typography variant="h6" gutterBottom>
-                Reviews
+                Business Hours
               </Typography>
-              {business.reviews && business.reviews.length > 0 ? (
-                business.reviews.map((review: any) => (
-                  <Box key={review._id} sx={{ mb: 2 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                      <Rating value={review.rating} size="small" readOnly />
-                      <Typography variant="body2" sx={{ ml: 1 }}>
-                        by {review.reviewerName}
-                      </Typography>
-                    </Box>
-                    <Typography variant="body2" color="text.secondary">
-                      {review.comment}
-                    </Typography>
-                  </Box>
-                ))
-              ) : (
-                <Typography variant="body2" color="text.secondary">
-                  No reviews yet.
-                </Typography>
-              )}
+              {Object.entries(business.hours).map(([day, hours]) => (
+                <Box key={day} sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                  <Typography variant="body2" sx={{ textTransform: 'capitalize' }}>
+                    {day}
+                  </Typography>
+                  <Typography variant="body2">{hours}</Typography>
+                </Box>
+              ))}
             </Paper>
           </Grid>
         </Grid>
       </Container>
 
       <Dialog open={uploadDialogOpen} onClose={() => setUploadDialogOpen(false)}>
-        <DialogTitle>
-          Upload {uploadType === 'logo' ? 'Logo' : 'Cover Photo'}
-        </DialogTitle>
+        <DialogTitle>Upload {uploadType === 'logo' ? 'Logo' : 'Cover Photo'}</DialogTitle>
         <DialogContent>
           <Box sx={{ mt: 2 }}>
             <input
@@ -400,11 +389,7 @@ const BusinessProfile: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setUploadDialogOpen(false)}>Cancel</Button>
-          <Button
-            onClick={handleUpload}
-            variant="contained"
-            disabled={!selectedFile}
-          >
+          <Button onClick={handleUpload} variant="contained" disabled={!selectedFile}>
             Upload
           </Button>
         </DialogActions>
