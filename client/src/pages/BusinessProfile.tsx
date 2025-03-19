@@ -78,7 +78,9 @@ const BusinessProfile: React.FC = () => {
       try {
         setLoading(true);
         setError(null);
-        const apiUrl = process.env.REACT_APP_API_URL;
+        const apiUrl = process.env.NODE_ENV === 'production'
+          ? process.env.REACT_APP_API_URL_PROD
+          : process.env.REACT_APP_API_URL;
         console.log('Using API URL:', apiUrl);
         console.log('Fetching business with ID:', id);
 
