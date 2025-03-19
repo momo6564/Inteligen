@@ -7,6 +7,7 @@ import {
   Grid,
   Card,
   CardContent,
+  CardMedia,
   CardActions,
   TextField,
   Box,
@@ -15,39 +16,55 @@ import {
   Switch,
   CircularProgress,
   Alert,
+  Rating,
+  Chip,
+  IconButton,
+  InputAdornment,
 } from '@mui/material';
+import {
+  Search as SearchIcon,
+  LocationOn,
+  Star,
+  Business,
+  AccessTime,
+} from '@mui/icons-material';
+import { styled } from '@mui/material/styles';
 
-interface Business {
-  _id: string;
-  name: string;
-  corporateId: string;
-  phone: string;
-  website: string;
-  contactPerson: string;
-  memberClass: string;
-  designation: string;
-  category: string;
-  address: string;
-  mobile: string;
-  email: string;
-}
+const HeroSection = styled('div')(({ theme }) => ({
+  background: 'linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url(https://source.unsplash.com/random/1600x900/?business)',
+  backgroundSize: 'cover',
+  backgroundPosition: 'center',
+  height: '400px',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  color: 'white',
+  textAlign: 'center',
+  marginBottom: theme.spacing(4),
+}));
 
-interface ApiResponse {
-  businesses: Business[];
-  totalPages: number;
-  totalBusinesses: number;
-}
+const BusinessCard = styled(Card)(({ theme }) => ({
+  height: '100%',
+  display: 'flex',
+  flexDirection: 'column',
+  transition: 'transform 0.2s',
+  '&:hover': {
+    transform: 'translateY(-4px)',
+    boxShadow: theme.shadows[4],
+  },
+}));
 
 const BusinessList: React.FC = () => {
   const navigate = useNavigate();
-  const [businesses, setBusinesses] = useState<Business[]>([]);
+  const [businesses, setBusinesses] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalBusinesses, setTotalBusinesses] = useState(0);
-  const [searchTerm, setSearchTerm] = useState('');
   const [showScrapedOnly, setShowScrapedOnly] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const itemsPerPage = 12;
 
   const fetchBusinesses = useCallback(async () => {
     try {
@@ -57,11 +74,10 @@ const BusinessList: React.FC = () => {
       const apiUrl = process.env.NODE_ENV === 'production'
         ? process.env.REACT_APP_API_URL_PROD
         : process.env.REACT_APP_API_URL;
-      console.log('Using API URL:', apiUrl);
 
-      const response = await fetch(`${apiUrl}/businesses?page=${page}&showScrapedOnly=${showScrapedOnly}`);
-      
-      console.log('Response status:', response.status);
+      const response = await fetch(
+        `${apiUrl}/businesses?page=${page}&limit=${itemsPerPage}&showScrapedOnly=${showScrapedOnly}&search=${searchQuery}`
+      );
       
       if (!response.ok) {
         throw new Error('Failed to fetch businesses');
@@ -73,132 +89,164 @@ const BusinessList: React.FC = () => {
       setTotalBusinesses(data.totalBusinesses);
     } catch (error) {
       setError(error instanceof Error ? error.message : 'An error occurred while fetching businesses');
-      console.error('Error fetching businesses:', error);
     } finally {
       setLoading(false);
     }
-  }, [page, showScrapedOnly]);
+  }, [page, showScrapedOnly, searchQuery]);
 
   useEffect(() => {
     fetchBusinesses();
-  }, [page, showScrapedOnly, fetchBusinesses]);
+  }, [fetchBusinesses]);
 
   const handlePageChange = (event: React.ChangeEvent<unknown>, value: number) => {
     setPage(value);
   };
 
   const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(event.target.value);
+    setSearchQuery(event.target.value);
+    setPage(1);
   };
 
-  const filteredBusinesses = businesses.filter(business =>
-    business.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    business.corporateId.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const handleShowScrapedOnlyChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setShowScrapedOnly(event.target.checked);
+    setPage(1);
+  };
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
         <CircularProgress />
       </Box>
     );
   }
 
-  if (error) {
-    return (
-      <Container maxWidth="lg">
-        <Alert severity="error" sx={{ mt: 4 }}>{error}</Alert>
-      </Container>
-    );
-  }
-
   return (
-    <Container maxWidth="lg">
-      <Paper sx={{ p: 4, mt: 4 }}>
-        <Typography variant="h4" gutterBottom>
-          Business Directory
-        </Typography>
-
-        <Box sx={{ mb: 4, display: 'flex', gap: 2, alignItems: 'center' }}>
+    <Box>
+      <HeroSection>
+        <Container maxWidth="md">
+          <Typography variant="h2" component="h1" gutterBottom>
+            Discover Local Businesses
+          </Typography>
+          <Typography variant="h5" sx={{ mb: 4 }}>
+            Find and explore the best businesses in your area
+          </Typography>
           <TextField
             fullWidth
-            label="Search businesses"
-            value={searchTerm}
+            variant="outlined"
+            placeholder="Search businesses..."
+            value={searchQuery}
             onChange={handleSearch}
-            sx={{ maxWidth: 400 }}
+            sx={{
+              backgroundColor: 'white',
+              borderRadius: 1,
+              '& .MuiOutlinedInput-root': {
+                '& fieldset': {
+                  borderColor: 'transparent',
+                },
+                '&:hover fieldset': {
+                  borderColor: 'transparent',
+                },
+              },
+            }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon />
+                </InputAdornment>
+              ),
+            }}
           />
+        </Container>
+      </HeroSection>
+
+      <Container maxWidth="lg">
+        <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="h6" color="text.secondary">
+            Found {totalBusinesses} businesses
+          </Typography>
           <FormControlLabel
             control={
               <Switch
                 checked={showScrapedOnly}
-                onChange={(e) => setShowScrapedOnly(e.target.checked)}
+                onChange={handleShowScrapedOnlyChange}
+                color="primary"
               />
             }
-            label="Show only scraped businesses"
+            label="Show verified businesses only"
           />
         </Box>
 
-        {filteredBusinesses.length === 0 ? (
-          <Typography variant="body1" color="text.secondary" align="center">
-            No businesses found
-          </Typography>
+        {error ? (
+          <Alert severity="error">{error}</Alert>
         ) : (
           <>
-            <Grid container spacing={3}>
-              {filteredBusinesses.map((business) => (
+            <Grid container spacing={4}>
+              {businesses.map((business) => (
                 <Grid item xs={12} sm={6} md={4} key={business._id}>
-                  <Card>
-                    <CardContent>
-                      <Typography variant="h6" gutterBottom>
+                  <BusinessCard>
+                    <CardMedia
+                      component="img"
+                      height="200"
+                      image={business.coverPhoto || `https://source.unsplash.com/random/400x300/?${business.category}`}
+                      alt={business.name}
+                    />
+                    <CardContent sx={{ flexGrow: 1 }}>
+                      <Typography gutterBottom variant="h6" component="h2">
                         {business.name}
                       </Typography>
-                      <Typography color="textSecondary" gutterBottom>
-                        Corporate ID: {business.corporateId}
-                      </Typography>
-                      <Typography variant="body2">
-                        Phone: {business.phone}
-                      </Typography>
-                      <Typography variant="body2">
-                        Website: {business.website}
-                      </Typography>
-                      <Typography variant="body2">
-                        Contact: {business.contactPerson}
-                      </Typography>
-                      <Typography variant="body2">
-                        Designation: {business.designation}
-                      </Typography>
-                      <Typography variant="body2">
-                        Category: {business.category}
-                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                        <Rating value={business.rating || 0} precision={0.5} readOnly size="small" />
+                        <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
+                          ({business.reviewCount || 0})
+                        </Typography>
+                      </Box>
+                      <Chip
+                        label={business.category}
+                        size="small"
+                        sx={{ mb: 1 }}
+                      />
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                        <LocationOn sx={{ fontSize: 16, mr: 0.5, color: 'text.secondary' }} />
+                        <Typography variant="body2" color="text.secondary">
+                          {business.address}
+                        </Typography>
+                      </Box>
+                      {business.hours && (
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                          <AccessTime sx={{ fontSize: 16, mr: 0.5, color: 'text.secondary' }} />
+                          <Typography variant="body2" color="text.secondary">
+                            {business.hours[new Date().getDay()]?.open || 'Closed'}
+                          </Typography>
+                        </Box>
+                      )}
                     </CardContent>
                     <CardActions>
-                      <Box sx={{ flexGrow: 1 }} />
-                      <Typography
-                        variant="body2"
+                      <Button
+                        size="small"
                         color="primary"
-                        sx={{ cursor: 'pointer' }}
                         onClick={() => navigate(`/business/${business._id}`)}
                       >
                         View Details
-                      </Typography>
+                      </Button>
                     </CardActions>
-                  </Card>
+                  </BusinessCard>
                 </Grid>
               ))}
             </Grid>
 
-            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+            <Box sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
               <Pagination
                 count={totalPages}
                 page={page}
                 onChange={handlePageChange}
                 color="primary"
+                size="large"
               />
             </Box>
           </>
         )}
-      </Paper>
-    </Container>
+      </Container>
+    </Box>
   );
 };
 

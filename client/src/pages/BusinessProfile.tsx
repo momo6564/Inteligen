@@ -12,7 +12,25 @@ import {
   Divider,
   Rating,
   Chip,
+  IconButton,
+  TextField,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
+import {
+  PhotoCamera,
+  Edit as EditIcon,
+  LocationOn,
+  Phone,
+  Email,
+  Language,
+  AccessTime,
+  Business,
+  Star,
+} from '@mui/icons-material';
+import { styled } from '@mui/material/styles';
 
 interface Business {
   _id: string;
@@ -64,7 +82,43 @@ interface Business {
     twitter: string;
   };
   scrapingStatus: string;
+  coverPhoto?: string;
+  reviewCount?: number;
 }
+
+const CoverPhoto = styled('div')(({ theme }) => ({
+  height: '300px',
+  backgroundSize: 'cover',
+  backgroundPosition: 'center',
+  position: 'relative',
+  '&::after': {
+    content: '""',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: 'linear-gradient(to bottom, rgba(0,0,0,0.2), rgba(0,0,0,0.6))',
+  },
+}));
+
+const LogoContainer = styled('div')(({ theme }) => ({
+  position: 'absolute',
+  bottom: '-50px',
+  left: '50px',
+  width: '120px',
+  height: '120px',
+  borderRadius: '8px',
+  overflow: 'hidden',
+  border: '4px solid white',
+  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+}));
+
+const Logo = styled('img')({
+  width: '100%',
+  height: '100%',
+  objectFit: 'cover',
+});
 
 const BusinessProfile: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -72,6 +126,10 @@ const BusinessProfile: React.FC = () => {
   const [business, setBusiness] = useState<Business | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [uploadType, setUploadType] = useState<'logo' | 'cover' | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchBusiness = async () => {
@@ -107,9 +165,52 @@ const BusinessProfile: React.FC = () => {
     }
   }, [id]);
 
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviewUrl(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleUpload = async () => {
+    if (!selectedFile || !uploadType) return;
+
+    try {
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+      formData.append('type', uploadType);
+
+      const apiUrl = process.env.NODE_ENV === 'production'
+        ? process.env.REACT_APP_API_URL_PROD
+        : process.env.REACT_APP_API_URL;
+
+      const response = await fetch(`${apiUrl}/businesses/${id}/upload`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to upload image');
+      }
+
+      const updatedBusiness = await response.json();
+      setBusiness(updatedBusiness);
+      setUploadDialogOpen(false);
+      setSelectedFile(null);
+      setPreviewUrl(null);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to upload image');
+    }
+  };
+
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
         <CircularProgress />
       </Box>
     );
@@ -117,8 +218,8 @@ const BusinessProfile: React.FC = () => {
 
   if (error || !business) {
     return (
-      <Container maxWidth="lg">
-        <Alert severity="error" sx={{ mt: 4 }}>{error || 'Business not found'}</Alert>
+      <Container maxWidth="md" sx={{ mt: 4 }}>
+        <Alert severity="error">{error || 'Business not found'}</Alert>
       </Container>
     );
   }
@@ -138,220 +239,177 @@ const BusinessProfile: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="lg">
-      <Paper sx={{ p: 4, mt: 4 }}>
+    <Box>
+      <CoverPhoto
+        style={{
+          backgroundImage: business.coverPhoto
+            ? `url(${business.coverPhoto})`
+            : 'url(https://source.unsplash.com/random/1600x900/?business)',
+        }}
+      >
+        <IconButton
+          sx={{
+            position: 'absolute',
+            top: 16,
+            right: 16,
+            color: 'white',
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            '&:hover': {
+              backgroundColor: 'rgba(0,0,0,0.7)',
+            },
+          }}
+          onClick={() => {
+            setUploadType('cover');
+            setUploadDialogOpen(true);
+          }}
+        >
+          <PhotoCamera />
+        </IconButton>
+      </CoverPhoto>
+
+      <Container maxWidth="lg" sx={{ mt: 8, mb: 4 }}>
         <Grid container spacing={4}>
-          {/* Header Section */}
-          <Grid item xs={12}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h4" component="h1">
+          <Grid item xs={12} md={8}>
+            <Box sx={{ mb: 4 }}>
+              <Typography variant="h4" component="h1" gutterBottom>
                 {business.name}
               </Typography>
-              <Button variant="outlined" onClick={() => navigate('/')}>
-                Back to List
-              </Button>
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-              <Rating value={business.rating} precision={0.5} readOnly />
-              <Typography variant="body1" color="text.secondary">
-                ({business.reviews.length} reviews)
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <Rating value={business.rating || 0} precision={0.5} readOnly />
+                <Typography variant="body2" sx={{ ml: 1 }}>
+                  ({business.reviewCount || 0} reviews)
+                </Typography>
+              </Box>
+              <Typography variant="subtitle1" color="text.secondary">
+                {business.category}
               </Typography>
             </Box>
-            <Chip label={business.category || 'Uncategorized'} color="primary" sx={{ mb: 2 }} />
+
+            <Paper sx={{ p: 3, mb: 4 }}>
+              <Typography variant="h6" gutterBottom>
+                About
+              </Typography>
+              <Typography variant="body1" paragraph>
+                {business.description || 'No description available.'}
+              </Typography>
+            </Paper>
+
+            <Paper sx={{ p: 3, mb: 4 }}>
+              <Typography variant="h6" gutterBottom>
+                Business Hours
+              </Typography>
+              {business.hours && Object.entries(business.hours).map(([day, hours]: [string, any]) => (
+                <Box key={day} sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                  <Typography variant="body2">{day}</Typography>
+                  <Typography variant="body2">
+                    {hours.open} - {hours.close}
+                  </Typography>
+                </Box>
+              ))}
+            </Paper>
           </Grid>
 
-          {/* Main Content */}
-          <Grid item xs={12} md={8}>
-            <Typography variant="h6" gutterBottom>
-              About
-            </Typography>
-            <Typography paragraph>
-              {business.description || 'No description available.'}
-            </Typography>
-
-            <Divider sx={{ my: 3 }} />
-
-            <Typography variant="h6" gutterBottom>
-              Contact Information
-            </Typography>
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Phone
-                </Typography>
-                <Typography>{getContactInfo('phone')}</Typography>
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Mobile
-                </Typography>
-                <Typography>{business.mobile || 'N/A'}</Typography>
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Email
-                </Typography>
-                <Typography>{getContactInfo('email')}</Typography>
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Website
-                </Typography>
-                <Typography>
-                  {getContactInfo('website') !== 'N/A' ? (
-                    <a href={getContactInfo('website')} target="_blank" rel="noopener noreferrer">
-                      {getContactInfo('website')}
-                    </a>
-                  ) : 'N/A'}
-                </Typography>
-              </Grid>
-            </Grid>
-
-            <Divider sx={{ my: 3 }} />
-
-            <Typography variant="h6" gutterBottom>
-              Business Details
-            </Typography>
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Corporate ID
-                </Typography>
-                <Typography>{business.corporateId || 'N/A'}</Typography>
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Member Class
-                </Typography>
-                <Typography>{business.memberClass || 'N/A'}</Typography>
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Designation
-                </Typography>
-                <Typography>{business.designation || 'N/A'}</Typography>
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Contact Person
-                </Typography>
-                <Typography>{business.contactPerson || 'N/A'}</Typography>
-              </Grid>
-            </Grid>
-
-            <Divider sx={{ my: 3 }} />
-
-            <Typography variant="h6" gutterBottom>
-              Address
-            </Typography>
-            <Typography>
-              {getAddress()}
-            </Typography>
-
-            {business.hours && (
-              <>
-                <Divider sx={{ my: 3 }} />
-                <Typography variant="h6" gutterBottom>
-                  Business Hours
-                </Typography>
-                <Grid container spacing={2}>
-                  {Object.entries(business.hours).map(([day, hours]) => (
-                    <Grid item xs={12} sm={6} key={day}>
-                      <Typography variant="subtitle2" sx={{ textTransform: 'capitalize' }}>
-                        {day}
-                      </Typography>
-                      <Typography>
-                        {hours.open} - {hours.close}
-                      </Typography>
-                    </Grid>
-                  ))}
-                </Grid>
-              </>
-            )}
-          </Grid>
-
-          {/* Sidebar */}
           <Grid item xs={12} md={4}>
-            {business.images.length > 0 && (
-              <Paper sx={{ p: 2, mb: 3 }}>
-                <Typography variant="h6" gutterBottom>
-                  Images
-                </Typography>
-                <Grid container spacing={2}>
-                  {business.images.map((image, index) => (
-                    <Grid item xs={12} key={index}>
-                      <img
-                        src={image}
-                        alt={`${business.name} #${index + 1}`}
-                        style={{ width: '100%', height: 'auto', borderRadius: '4px' }}
-                      />
-                    </Grid>
-                  ))}
-                </Grid>
-              </Paper>
-            )}
+            <Paper sx={{ p: 3, mb: 4 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <LocationOn sx={{ mr: 1, color: 'primary.main' }} />
+                <Typography variant="body1">{getAddress()}</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <Phone sx={{ mr: 1, color: 'primary.main' }} />
+                <Typography variant="body1">{getContactInfo('phone')}</Typography>
+              </Box>
+              {business.email && (
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <Email sx={{ mr: 1, color: 'primary.main' }} />
+                  <Typography variant="body1">{getContactInfo('email')}</Typography>
+                </Box>
+              )}
+              {business.website && (
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <Language sx={{ mr: 1, color: 'primary.main' }} />
+                  <Typography variant="body1">
+                    <a href={getContactInfo('website')} target="_blank" rel="noopener noreferrer">
+                      Visit Website
+                    </a>
+                  </Typography>
+                </Box>
+              )}
+            </Paper>
 
-            {business.socialMedia && (
-              <Paper sx={{ p: 2 }}>
-                <Typography variant="h6" gutterBottom>
-                  Social Media
-                </Typography>
-                <Grid container spacing={2}>
-                  {Object.entries(business.socialMedia).map(([platform, url]) => (
-                    url && (
-                      <Grid item xs={6} key={platform}>
-                        <Typography variant="subtitle2" sx={{ textTransform: 'capitalize' }}>
-                          {platform}
-                        </Typography>
-                        <Typography>
-                          <a href={url} target="_blank" rel="noopener noreferrer">
-                            {url}
-                          </a>
-                        </Typography>
-                      </Grid>
-                    )
-                  ))}
-                </Grid>
-              </Paper>
-            )}
-          </Grid>
-
-          {/* Reviews Section */}
-          <Grid item xs={12}>
-            <Divider sx={{ my: 3 }} />
-            <Typography variant="h6" gutterBottom>
-              Reviews
-            </Typography>
-            {business.reviews.length === 0 ? (
-              <Typography color="text.secondary">
-                No reviews yet. Be the first to review this business!
+            <Paper sx={{ p: 3 }}>
+              <Typography variant="h6" gutterBottom>
+                Reviews
               </Typography>
-            ) : (
-              <Grid container spacing={3}>
-                {business.reviews.map((review) => (
-                  <Grid item xs={12} key={review._id}>
-                    <Paper sx={{ p: 2 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                        <Rating value={review.rating} size="small" readOnly />
-                        <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
-                          by {review.reviewerName}
-                        </Typography>
-                      </Box>
-                      <Typography variant="body1">
-                        {review.comment}
+              {business.reviews && business.reviews.length > 0 ? (
+                business.reviews.map((review: any) => (
+                  <Box key={review._id} sx={{ mb: 2 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                      <Rating value={review.rating} size="small" readOnly />
+                      <Typography variant="body2" sx={{ ml: 1 }}>
+                        by {review.reviewerName}
                       </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {new Date(review.createdAt).toLocaleDateString()}
-                      </Typography>
-                    </Paper>
-                  </Grid>
-                ))}
-              </Grid>
-            )}
+                    </Box>
+                    <Typography variant="body2" color="text.secondary">
+                      {review.comment}
+                    </Typography>
+                  </Box>
+                ))
+              ) : (
+                <Typography variant="body2" color="text.secondary">
+                  No reviews yet.
+                </Typography>
+              )}
+            </Paper>
           </Grid>
         </Grid>
-      </Paper>
-    </Container>
+      </Container>
+
+      <Dialog open={uploadDialogOpen} onClose={() => setUploadDialogOpen(false)}>
+        <DialogTitle>
+          Upload {uploadType === 'logo' ? 'Logo' : 'Cover Photo'}
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ mt: 2 }}>
+            <input
+              accept="image/*"
+              style={{ display: 'none' }}
+              id="image-upload"
+              type="file"
+              onChange={handleFileSelect}
+            />
+            <label htmlFor="image-upload">
+              <Button
+                variant="contained"
+                component="span"
+                startIcon={<PhotoCamera />}
+              >
+                Select Image
+              </Button>
+            </label>
+            {previewUrl && (
+              <Box sx={{ mt: 2 }}>
+                <img
+                  src={previewUrl}
+                  alt="Preview"
+                  style={{ maxWidth: '100%', maxHeight: '300px' }}
+                />
+              </Box>
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setUploadDialogOpen(false)}>Cancel</Button>
+          <Button
+            onClick={handleUpload}
+            variant="contained"
+            disabled={!selectedFile}
+          >
+            Upload
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
   );
 };
 
