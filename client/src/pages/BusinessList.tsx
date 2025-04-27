@@ -55,6 +55,20 @@ const BusinessCard = styled(Card)(({ theme }) => ({
   },
 }));
 
+const formatAddress = (address: any) => {
+  if (!address) return 'Address not available';
+  if (typeof address === 'string') return address;
+  
+  const parts = [];
+  if (address.street) parts.push(address.street);
+  if (address.city) parts.push(address.city);
+  if (address.state) parts.push(address.state);
+  if (address.zipCode) parts.push(address.zipCode);
+  if (address.country) parts.push(address.country);
+  
+  return parts.join(', ');
+};
+
 const BusinessList: React.FC = () => {
   const navigate = useNavigate();
   const [businesses, setBusinesses] = useState<any[]>([]);
@@ -209,7 +223,7 @@ const BusinessList: React.FC = () => {
                       <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                         <LocationOn sx={{ fontSize: 16, mr: 0.5, color: 'text.secondary' }} />
                         <Typography variant="body2" color="text.secondary">
-                          {business.address}
+                          {formatAddress(business.address)}
                         </Typography>
                       </Box>
                       {business.hours && (

@@ -325,7 +325,7 @@ const BusinessProfile: React.FC = () => {
         sx={{
           backgroundImage: business?.coverPhoto
             ? `url(${business.coverPhoto})`
-            : 'url(https://source.unsplash.com/random/1600x900/?restaurant)',
+            : 'url(/default-cover.jpg.jpg)',
         }}
       >
         <IconButton
@@ -346,33 +346,32 @@ const BusinessProfile: React.FC = () => {
         >
           <PhotoCamera />
         </IconButton>
+        <LogoContainer>
+          <Logo
+            src={business?.logo || '/default-logo.jpg.jpg'}
+            alt={business?.name || 'Business Logo'}
+          />
+          <IconButton
+            sx={{
+              position: 'absolute',
+              bottom: 0,
+              right: 0,
+              backgroundColor: 'white',
+              '&:hover': {
+                backgroundColor: 'grey.100',
+              },
+            }}
+            onClick={() => {
+              setUploadType('logo');
+              setUploadDialogOpen(true);
+            }}
+          >
+            <PhotoCamera />
+          </IconButton>
+        </LogoContainer>
       </CoverPhoto>
 
-      <LogoContainer>
-        <Logo
-          src={business?.logo || 'https://source.unsplash.com/random/150x150/?logo'}
-          alt={business?.name || 'Business Logo'}
-        />
-        <IconButton
-          sx={{
-            position: 'absolute',
-            bottom: 0,
-            right: 0,
-            backgroundColor: 'white',
-            '&:hover': {
-              backgroundColor: 'grey.100',
-            },
-          }}
-          onClick={() => {
-            setUploadType('logo');
-            setUploadDialogOpen(true);
-          }}
-        >
-          <PhotoCamera />
-        </IconButton>
-      </LogoContainer>
-
-      <Container sx={{ mt: 8, mb: 4 }}>
+      <Container sx={{ mt: 16, mb: 4 }}>
         <Grid container spacing={4}>
           <Grid item xs={12} md={8}>
             <Paper sx={{ p: 3 }}>
