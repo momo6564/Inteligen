@@ -1,0 +1,44 @@
+{
+  "builds": [
+    {
+      "src": "client/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "build"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/static/(.*)",
+      "dest": "client/build/static/$1",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
+    },
+    {
+      "src": "/favicon.ico",
+      "dest": "client/build/favicon.ico"
+    },
+    {
+      "src": "/asset-manifest.json",
+      "dest": "client/build/asset-manifest.json"
+    },
+    {
+      "src": "/manifest.json",
+      "dest": "client/build/manifest.json"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "client/build/index.html",
+      "headers": {
+        "cache-control": "public, max-age=0, must-revalidate"
+      }
+    }
+  ],
+  "env": {
+    "NODE_ENV": "production",
+    "REACT_APP_API_URL": "https://web-production-d6ff5.up.railway.app/api",
+    "CI": "false"
+  }
+} 
