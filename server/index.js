@@ -26,7 +26,8 @@ const corsOptions = {
       'http://localhost:3000',
       'https://sayrab.vercel.app',
       'https://sayrab-git-main-momo6564s-projects.vercel.app',
-      'https://sayrab-momo6564s-projects.vercel.app'
+      'https://sayrab-momo6564s-projects.vercel.app',
+      'https://inteligen-x2d5.vercel.app'
     ];
     // Allow requests with no origin (like mobile apps, curl, etc.)
     if (!origin || allowedOrigins.indexOf(origin) !== -1) {
